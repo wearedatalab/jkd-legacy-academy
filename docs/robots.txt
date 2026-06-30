@@ -1,3 +1,16 @@
 # Demo de navegación (GitHub Pages) — no indexar; el sitio real es jkdlegacy.com.au
 User-agent: *
 Disallow: /
+
+# Scrapers de tarjetas sociales: permitidos (vista previa de enlaces)
+User-agent: facebookexternalhit
+User-agent: Facebot
+User-agent: Twitterbot
+User-agent: LinkedInBot
+User-agent: Slackbot-LinkExpanding
+User-agent: WhatsApp
+User-agent: TelegramBot
+User-agent: Discordbot
+User-agent: Pinterest
+User-agent: redditbot
+Allow: /
