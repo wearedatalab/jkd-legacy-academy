@@ -1,0 +1,6 @@
+# 301 — URLs .html -> URLs limpias (hosting estatico: Netlify / Cloudflare Pages)
+/index.html             /                  301!
+/legacy.html            /legacy            301!
+/the-way.html           /the-way           301!
+/join-the-family.html   /join-the-family   301!
+/thanks.html            /thanks            301!

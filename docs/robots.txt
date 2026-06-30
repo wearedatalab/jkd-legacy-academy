@@ -1,0 +1,3 @@
+# Demo de navegación (GitHub Pages) — no indexar; el sitio real es jkdlegacy.com.au
+User-agent: *
+Disallow: /

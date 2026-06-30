@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Analítica y marketing (GA4 + Meta Pixel) -->
+<script async src="/analytics.js"></script>
+<title data-i18n-title="thanks.title">Thank You — The JKD Legacy Academy</title>
+<meta name="robots" content="noindex">
+<meta name="description" content="Gracias por tu solicitud para entrenar en The JKD Legacy Academy. Te contactaremos personalmente.">
+<link rel="canonical" href="https://jkdlegacy.com.au/thanks">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..600&family=Inter:wght@300..600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" type="image/png" href="images/favicon.png">
+<style>
+  .thanks { min-height: 100vh; display: grid; place-items: center; text-align: center; position: relative; overflow: hidden; padding: 140px 0 90px; }
+  .thanks::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 60% at 50% 30%, var(--accent-soft), transparent 70%); pointer-events: none; }
+  .thanks .container { position: relative; z-index: 1; max-width: 720px; }
+  .thanks .eyebrow { justify-content: center; }
+  .thanks h1 { margin: 22px 0 24px; }
+  .thanks p.lead { margin: 0 auto 18px; }
+  .thanks .note { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.06em; color: var(--text-mute); max-width: 46ch; margin: 0 auto 38px; }
+  .thanks .actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .seal-check { width: 92px; height: 92px; margin: 0 auto; display: block; }
+  .seal-check circle.ring { fill: none; stroke: var(--brass); stroke-width: 2; opacity: 0.5; }
+  .seal-check circle.spin-ring { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 6 8; opacity: 0.6; transform-origin: center; animation: ckspin 14s linear infinite; }
+  .seal-check path { fill: none; stroke: var(--accent-2); stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 48; stroke-dashoffset: 48; animation: ckdraw 0.8s var(--e) 0.25s forwards; }
+  @keyframes ckdraw { to { stroke-dashoffset: 0; } }
+  @keyframes ckspin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .seal-check path { animation: none; stroke-dashoffset: 0; } .seal-check circle.spin-ring { animation: none; } }
+</style>
+</head>
+<body>
+
+<div class="centerline" aria-hidden="true"><span class="centerline-tick"></span></div>
+<span class="centerline-read" aria-hidden="true" data-cl-read>SCROLL · 截拳道</span>
+
+<header class="nav">
+  <div class="container nav-inner">
+    <a href="/" class="brand" aria-label="The JKD Legacy Academy">
+      <img src="images/logo-horizontal.png" alt="The JKD Legacy Academy" class="brand-logo" width="350" height="107">
+    </a>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="/" data-i18n="nav.home">Home</a></li>
+        <li><a href="/legacy" data-i18n="nav.legacy">Legacy</a></li>
+        <li><a href="/the-way" data-i18n="nav.way">The Way</a></li>
+        <li><a href="/join-the-family" class="active" data-i18n="nav.join">Join</a></li>
+        <li><a href="/join-the-family#inquire" class="nav-cta" data-i18n="nav.cta">Begin Journey</a></li>
+        <li class="lang-toggle" aria-label="Language">
+          <button type="button" data-lang="en">EN</button>
+          <button type="button" data-lang="es">ES</button>
+        </li>
+      </ul>
+    </nav>
+    <button class="nav-toggle" aria-label="Menu" aria-expanded="false"><span></span></button>
+  </div>
+</header>
+
+<main>
+
+<section class="thanks">
+  <div class="container">
+    <svg class="seal-check" viewBox="0 0 100 100" aria-hidden="true">
+      <circle class="ring" cx="50" cy="50" r="44"/>
+      <circle class="spin-ring" cx="50" cy="50" r="38"/>
+      <path d="M32 51 L45 64 L70 37"/>
+    </svg>
+    <span class="eyebrow reveal" data-i18n="thanks.eyebrow">Inquiry Received</span>
+    <h1 class="reveal delay-1" data-i18n-html="thanks.h1">Your Inquiry<br><span class="text-accent">Has Been Received</span>.</h1>
+    <p class="lead reveal delay-2" data-i18n="thanks.p">Thank you for reaching out. Sigung Vargas — or the Adelaide head instructor — will personally review your inquiry and contact you to arrange a private conversation. The path begins here.</p>
+    <p class="note reveal delay-2" data-i18n="thanks.note">A confirmation has been logged. Expect a personal call, not an automated reply.</p>
+    <div class="actions reveal delay-3">
+      <a href="/" class="btn btn-primary" data-magnetic><span data-i18n="thanks.btnHome">Return Home</span> <span class="btn-arrow">→</span></a>
+      <a href="/legacy" class="btn btn-ghost" data-i18n="thanks.btnLegacy">Explore the Legacy</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <img loading="lazy" decoding="async" src="images/logo-horizontal.png" alt="JKD Legacy Academy">
+        <p data-i18n="footer.brand">Australia's authentic home of Bruce Lee's Jeet Kune Do — a private membership Kwoon for the philosophical warrior.</p>
+        <div class="socials">
+          <a href="https://www.facebook.com/RicardoVargasJeetKuneDo/" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M9 8H6v4h3v12h5V12h3.642L18 8h-4V6.333C14 5.378 14.192 5 15.115 5H18V0h-3.808C10.596 0 9 1.583 9 4.615V8z"/></svg></a>
+          <a href="https://www.instagram.com/jkdaustralia/" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.16c3.2 0 3.58.01 4.85.07 3.25.15 4.77 1.69 4.92 4.92.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.15 3.23-1.66 4.77-4.92 4.92-1.27.06-1.64.07-4.85.07s-3.58-.01-4.85-.07c-3.26-.15-4.77-1.69-4.92-4.92-.06-1.27-.07-1.64-.07-4.85s.01-3.58.07-4.85c.15-3.23 1.66-4.77 4.92-4.92C8.42 2.17 8.8 2.16 12 2.16zM12 0C8.74 0 8.33.01 7.05.07 2.7.27.27 2.69.07 7.05.01 8.33 0 8.74 0 12s.01 3.67.07 4.95c.2 4.36 2.62 6.78 6.98 6.98C8.33 23.99 8.74 24 12 24s3.67-.01 4.95-.07c4.35-.2 6.78-2.62 6.98-6.98.06-1.28.07-1.69.07-4.95s-.01-3.67-.07-4.95C23.74 2.69 21.31.27 16.95.07 15.67.01 15.26 0 12 0zm0 5.84a6.16 6.16 0 1 0 0 12.32 6.16 6.16 0 0 0 0-12.32zm0 10.16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.41-11.85a1.44 1.44 0 1 0 0 2.88 1.44 1.44 0 0 0 0-2.88z"/></svg></a>
+          <a href="#" aria-label="LinkedIn"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.85-3.04-1.85 0-2.13 1.45-2.13 2.94v5.67H9.36V9h3.41v1.56h.05a3.74 3.74 0 0 1 3.36-1.85c3.59 0 4.26 2.36 4.26 5.43v6.31zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.72v20.55C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.72V1.72C24 .77 23.2 0 22.22 0z"/></svg></a>
+          <a href="https://www.youtube.com/@RicardoVargasJKD" target="_blank" rel="noopener noreferrer" aria-label="YouTube"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.6 3.6 12 3.6 12 3.6s-7.6 0-9.4.5A3 3 0 0 0 .5 6.2 31.4 31.4 0 0 0 0 12a31.4 31.4 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.8.5 9.4.5 9.4.5s7.6 0 9.4-.5a3 3 0 0 0 2.1-2.1 31.4 31.4 0 0 0 .5-5.8 31.4 31.4 0 0 0-.5-5.8zM9.6 15.6V8.4l6.3 3.6-6.3 3.6z"/></svg></a>
+        </div>
+      </div>
+      <div><h2 data-i18n="footer.explore">Explore</h2><ul><li><a href="/" data-i18n="nav.home">Home</a></li><li><a href="/legacy" data-i18n="nav.legacy">Legacy</a></li><li><a href="/the-way" data-i18n="nav.way">The Way</a></li><li><a href="/join-the-family" data-i18n="nav.join">Join the Family</a></li></ul></div>
+      <div><h2 data-i18n="footer.locations">Locations</h2><ul><li><a href="/join-the-family" data-i18n="footer.melbourne">Melbourne · HQ</a></li><li><a href="/join-the-family" data-i18n="footer.adelaide">Adelaide Kwoon</a></li></ul></div>
+      <div><h2 data-i18n="footer.contact">Contact</h2><ul><li><a href="tel:0459785073">0459 785 073</a></li><li><a href="tel:0411268793">0411 268 793</a></li><li><a href="/join-the-family#inquire" data-i18n="footer.inquire">Inquire to Train</a></li></ul></div>
+    </div>
+    <div class="footer-bottom">
+      <span data-i18n-html="footer.copyright">© <span data-year>2026</span> The JKD Legacy Academy · All rights reserved.</span>
+      <span data-i18n="footer.tagline">"Under the sky, under the heavens, there is but one FAMILY."</span>
+    </div>
+  </div>
+</footer>
+
+<script defer src="i18n.js"></script>
+<script defer src="script.js"></script>
+</body>
+</html>

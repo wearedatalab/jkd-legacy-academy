@@ -1,0 +1,9 @@
+# Datos y dependencias
+jkd-legacy-crm/data/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+node_modules/
+.DS_Store
+Thumbs.db
