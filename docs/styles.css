@@ -166,6 +166,9 @@ p  { color: var(--text-dim); }
   border-bottom: 1px solid var(--line);
   padding: 13px 0;
 }
+/* Con el menú abierto, el backdrop-filter haría que .nav "contenga" al drawer fixed
+   (se rompe al hacer scroll en móvil). Lo desactivamos para que el menú use el viewport. */
+.nav.open { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 .nav-inner { display: flex; align-items: center; justify-content: space-between; }
 .brand { display: flex; align-items: center; gap: 13px; color: var(--text); }
 .brand-mark {
@@ -234,17 +237,25 @@ p  { color: var(--text-dim); }
 .nav.open .nav-toggle span::after { top: 0; transform: rotate(-45deg); }
 
 @media (max-width: 940px) {
-  .nav-toggle { display: flex; }
-  .nav-links {
-    position: fixed; inset: 0 0 0 auto; width: min(82vw, 340px);
-    background: rgba(11,12,16,0.97); backdrop-filter: blur(22px);
-    flex-direction: column; align-items: flex-start; gap: 22px;
-    padding: 108px 36px 36px; transform: translateX(100%); transition: transform var(--t);
-    border-left: 1px solid var(--line);
+  .nav-toggle { display: flex; position: relative; z-index: 3; }
+  /* Velo a pantalla completa detrás del menú (oscurece el contenido) */
+  .nav.open::before {
+    content: ''; position: fixed; inset: 0; z-index: 1;
+    background: rgba(8,9,12,0.62); animation: fadeScrim var(--t-fast) var(--e);
   }
-  .nav.open .nav-links { transform: translateX(0); }
-  .nav-links a { font-size: 0.95rem; }
+  .nav-links {
+    position: fixed; inset: 0 0 0 auto; width: min(84vw, 360px); z-index: 2;
+    background: var(--ink);                 /* sólido y opaco: nada se transparenta al hacer scroll */
+    flex-direction: column; align-items: flex-start; gap: 22px;
+    padding: 108px 36px 40px; transform: translateX(100%); transition: transform var(--t);
+    border-left: 1px solid var(--line); overflow-y: auto;
+  }
+  .nav.open .nav-links { transform: translateX(0); box-shadow: -30px 0 90px -24px rgba(0,0,0,0.7); }
+  .nav-links a { font-size: 1rem; }
 }
+@keyframes fadeScrim { from { opacity: 0; } to { opacity: 1; } }
+/* Bloquea el scroll del fondo mientras el menú móvil está abierto */
+body.nav-open { overflow: hidden; }
 
 /* ===================== BUTTONS ===================== */
 .btn {

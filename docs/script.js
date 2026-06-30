@@ -11,13 +11,14 @@ if (nav) {
 
 // ===== Mobile menu =====
 if (navToggle) {
-  navToggle.addEventListener('click', () => {
-    nav.classList.toggle('open');
-    navToggle.setAttribute('aria-expanded', nav.classList.contains('open'));
-  });
-  navLinks.querySelectorAll('a').forEach(a =>
-    a.addEventListener('click', () => nav.classList.remove('open'))
-  );
+  const setMenu = (open) => {
+    nav.classList.toggle('open', open);
+    document.body.classList.toggle('nav-open', open);   // bloquea el scroll del fondo
+    navToggle.setAttribute('aria-expanded', open);
+    if (typeof updateFloat === 'function') updateFloat();
+  };
+  navToggle.addEventListener('click', () => setMenu(!nav.classList.contains('open')));
+  navLinks.querySelectorAll('a').forEach(a => a.addEventListener('click', () => setMenu(false)));
 }
 
 // ===== Reveal on scroll =====
@@ -101,21 +102,13 @@ document.querySelectorAll('a[href^="#"]').forEach(a => {
 // ===== Year =====
 document.querySelectorAll('[data-year]').forEach(el => el.textContent = new Date().getFullYear());
 
-// ===== Floating register CTA: aparece al hacer scroll, se oculta al llegar al formulario / footer =====
+// ===== Floating register CTA: SIEMPRE visible (solo se oculta con el menú móvil abierto) =====
 const floatCta = document.querySelector('.float-cta');
-if (floatCta) {
-  const inquireEl = document.querySelector('#inquire');
-  const footerEl = document.querySelector('.footer');
-  const inView = (el) => { if (!el) return false; const r = el.getBoundingClientRect(); return r.top < window.innerHeight * 0.9 && r.bottom > 0; };
-  const updateFloat = () => {
-    const scrolled = window.scrollY > 460;
-    const overlap = inView(inquireEl) || inView(footerEl);
-    floatCta.classList.toggle('show', scrolled && !overlap);
-  };
-  window.addEventListener('scroll', updateFloat, { passive: true });
-  window.addEventListener('resize', updateFloat);
-  updateFloat();
+function updateFloat() {
+  if (!floatCta) return;
+  floatCta.classList.toggle('show', !document.body.classList.contains('nav-open'));
 }
+updateFloat();
 
 // ===== Web capture form — rendered from CRM config → JKD Legacy CRM =====
 const CRM_ENDPOINT = '/api/public/lead';
