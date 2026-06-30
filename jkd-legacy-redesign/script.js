@@ -196,7 +196,7 @@ let formFields = [];
 async function renderWebForm() {
   if (!fieldsHost) return;
   let cfg = null;
-  try { cfg = await fetch(FORM_ENDPOINT).then((r) => r.json()); } catch (e) {}
+  if (!window.JKD_NO_BACKEND) { try { cfg = await fetch(FORM_ENDPOINT).then((r) => r.json()); } catch (e) {} }
   if (!cfg || !Array.isArray(cfg.fields) || !cfg.fields.length) cfg = FALLBACK_FORM;   // CRM no disponible → form por defecto
   formFields = cfg.fields;
   const lang = curLang();
@@ -246,7 +246,7 @@ if (form) {
     if (extras.length) payload.message = [payload.message, extras.join('\n')].filter(Boolean).join('\n');
     payload.attribution = buildAttribution(lang);
     if (btn) btn.disabled = true;
-    fetch(CRM_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), keepalive: true }).catch(() => {});
-    window.location.href = '/thanks';
+    if (!window.JKD_NO_BACKEND) fetch(CRM_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), keepalive: true }).catch(() => {});
+    window.location.href = window.JKD_NO_BACKEND ? 'thanks.html' : '/thanks';
   });
 }

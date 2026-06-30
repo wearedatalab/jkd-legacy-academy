@@ -7,6 +7,8 @@
    ============================================================ */
 (function () {
   var host = location.hostname;
+  // Demo estática sin backend (GitHub Pages): no pidas /api/public/site-config (evita 404 en consola).
+  if (window.JKD_NO_BACKEND) return;
   // No disparar en entornos locales/preview para no ensuciar las cuentas reales.
   if (host === 'localhost' || host === '127.0.0.1' || host === '' || /\.local$/.test(host)) return;
 
