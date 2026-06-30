@@ -667,7 +667,7 @@ textarea.form-control { min-height: 128px; resize: vertical; }
 /* ===================== FOOTER ===================== */
 .footer { background: var(--ink-2); padding: 84px 0 30px; border-top: 1px solid var(--line); }
 .footer-grid { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 56px; }
-.footer-brand img { height: 38px; margin-bottom: 20px; }
+.footer-brand img { height: 38px; width: auto; margin-bottom: 20px; }
 .footer-brand p { font-size: 0.9rem; max-width: 34ch; }
 .footer h2 { font-family: var(--mono); font-size: 0.64rem; font-weight: 400; letter-spacing: 0.2em; color: var(--text); text-transform: uppercase; margin-bottom: 20px; line-height: 1.2; }
 .footer ul { list-style: none; } .footer li { margin-bottom: 11px; }
