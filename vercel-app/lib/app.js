@@ -15,7 +15,9 @@ import { sendMagicLink } from './email.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');                      // …/jkd-legacy-crm (o raíz en Vercel)
-const PUBLIC_DIR = path.join(ROOT, 'public');                 // CRM SPA (bajo /crm)
+// CRM SPA (bajo /crm). En Vercel la carpeta se llama "webui" (no "public", que Vercel sirve como estáticos en "/")
+const PUBLIC_CANDIDATES = [path.join(ROOT, 'webui'), path.join(ROOT, 'public')];
+const PUBLIC_DIR = PUBLIC_CANDIDATES.find((d) => { try { return fs.existsSync(d); } catch { return false; } }) || PUBLIC_CANDIDATES[PUBLIC_CANDIDATES.length - 1];
 // El sitio de marketing puede estar como ./site (deploy Vercel) o ../jkd-legacy-redesign (local)
 const SITE_CANDIDATES = [process.env.SITE_DIR, path.join(ROOT, 'site'), path.join(ROOT, '..', 'jkd-legacy-redesign')].filter(Boolean);
 const SITE_DIR = SITE_CANDIDATES.find((d) => { try { return fs.existsSync(d); } catch { return false; } }) || SITE_CANDIDATES[SITE_CANDIDATES.length - 1];
