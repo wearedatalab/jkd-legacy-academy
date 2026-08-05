@@ -155,9 +155,11 @@ async function seed() {
   const c = await db.get('SELECT COUNT(*) c FROM users');
   if (Number(c.c) > 0) return;
   const t = nowISO();
-  await db.run('INSERT INTO users (name,email,role,active,created_at) VALUES (?,?,?,1,?)', ['Administrador', 'admin@jkdlegacy.com.au', 'admin', t]);
+  // El correo admin es configurable por env (debe ser un buzón real: ahí llega el magic link)
+  const adminEmail = (process.env.ADMIN_EMAIL || 'admin@jkdlegacy.com.au').trim().toLowerCase();
+  await db.run('INSERT INTO users (name,email,role,active,created_at) VALUES (?,?,?,1,?)', ['Administrador', adminEmail, 'admin', t]);
   await db.run('INSERT INTO users (name,email,role,active,created_at) VALUES (?,?,?,1,?)', ['Comercial', 'comercial@jkdlegacy.com.au', 'comercial', t]);
-  console.log('· Seed: 2 usuarios (admin + comercial), 0 leads.');
+  console.log('· Seed: admin (' + adminEmail + ') + comercial, 0 leads.');
 }
 
 const DEFAULT_FORM = {
