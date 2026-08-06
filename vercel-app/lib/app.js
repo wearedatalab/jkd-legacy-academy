@@ -482,8 +482,8 @@ export async function handle(req, res) {
     if (method === 'POST') {
       if (!(await rateOk(`lead:${clientIp(req)}`, 20, 3600))) return json(res, 429, { error: 'Demasiadas solicitudes. Inténtalo más tarde.' });
       const b = await readBody(req);
-      // Honeypot: campos ocultos que solo un bot rellenaría → fingir éxito y descartar
-      if (clean(b.company) || clean(b.website) || clean(b.fax)) return json(res, 201, { ok: true });
+      // (Honeypot retirado: el navegador autocompletaba el campo oculto y descartaba leads reales.
+      //  El anti-spam queda por rate-limit + validación; si hiciera falta, añadir un captcha real tipo Turnstile.)
       const email = cap(b.email, 160);
       if (email && !EMAIL_RE.test(email)) return json(res, 400, { error: 'Correo inválido' });
       const t = nowISO();

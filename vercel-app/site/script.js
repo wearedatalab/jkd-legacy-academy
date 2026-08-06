@@ -221,8 +221,6 @@ async function renderWebForm() {
     } else ctrl = `<input class="form-control" type="${f.type || 'text'}" id="${id}"${phAttr} ${req}>`;
     return `<div class="form-group"><label for="${id}">${escHtml(label)}${star}</label>${ctrl}</div>`;
   }).join('');
-  // Honeypot anti-bot: invisible para humanos; si llega relleno, el servidor descarta el lead
-  fieldsHost.innerHTML += '<div aria-hidden="true" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden"><label>Company</label><input type="text" id="wf-company" name="company" tabindex="-1" autocomplete="off"></div>';
 }
 if (fieldsHost) {
   renderWebForm();
@@ -246,8 +244,6 @@ if (form) {
       else { const label = (lang === 'es' && f.labelEs) ? f.labelEs : (f.label || f.key); extras.push(label + ': ' + v); }
     });
     if (extras.length) payload.message = [payload.message, extras.join('\n')].filter(Boolean).join('\n');
-    const hp = document.getElementById('wf-company');
-    if (hp && hp.value) payload.company = hp.value; // honeypot: solo un bot lo rellena
     payload.attribution = buildAttribution(lang);
     if (btn) btn.disabled = true;
     if (!window.JKD_NO_BACKEND) fetch(CRM_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), keepalive: true }).catch(() => {});
