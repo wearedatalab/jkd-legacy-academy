@@ -192,6 +192,21 @@ const FALLBACK_FORM = {
     privacy_es: 'Tu solicitud es privada. No compartimos tu información.',
   },
 };
+// Códigos de país para el teléfono (Australia por defecto)
+const PHONE_CODES = [
+  ['AU', '+61', 'Australia'], ['NZ', '+64', 'New Zealand'], ['US', '+1', 'USA / Canadá'],
+  ['GB', '+44', 'United Kingdom'], ['CO', '+57', 'Colombia'], ['MX', '+52', 'México'],
+  ['AR', '+54', 'Argentina'], ['CL', '+56', 'Chile'], ['PE', '+51', 'Perú'], ['EC', '+593', 'Ecuador'],
+  ['VE', '+58', 'Venezuela'], ['BR', '+55', 'Brasil'], ['ES', '+34', 'España'], ['PH', '+63', 'Philippines'],
+  ['IN', '+91', 'India'], ['CN', '+86', 'China'], ['ID', '+62', 'Indonesia'], ['MY', '+60', 'Malaysia'],
+  ['SG', '+65', 'Singapore'], ['VN', '+84', 'Vietnam'], ['TH', '+66', 'Thailand'], ['JP', '+81', 'Japan'],
+  ['KR', '+82', 'South Korea'], ['DE', '+49', 'Germany'], ['FR', '+33', 'France'], ['IT', '+39', 'Italy'],
+  ['PT', '+351', 'Portugal'], ['ZA', '+27', 'South Africa'], ['AE', '+971', 'UAE'],
+];
+const flagEmoji = (iso) => iso.replace(/./g, (ch) => String.fromCodePoint(127397 + ch.charCodeAt(0)));
+const phoneCcOptions = () => PHONE_CODES.map(([iso, dial, name]) =>
+  `<option value="${dial}"${iso === 'AU' ? ' selected' : ''}>${flagEmoji(iso)} ${dial} · ${name}</option>`).join('');
+
 let formFields = [];
 async function renderWebForm() {
   if (!fieldsHost) return;
@@ -218,6 +233,11 @@ async function renderWebForm() {
     else if (f.type === 'select') {
       const opts = (lang === 'es' && f.optionsEs && f.optionsEs.length) ? f.optionsEs : (f.options || []);
       ctrl = `<select class="form-control" id="${id}" ${req}><option value="">${escHtml(phv || ph)}</option>${opts.map((o) => `<option>${escHtml(o)}</option>`).join('')}</select>`;
+    } else if (f.type === 'tel') {
+      ctrl = `<div style="display:flex;gap:8px;align-items:stretch">`
+        + `<select class="form-control" id="${id}-cc" aria-label="Código de país" style="flex:0 0 auto;width:150px;max-width:45%">${phoneCcOptions()}</select>`
+        + `<input class="form-control" type="tel" id="${id}" inputmode="tel"${phAttr || ' placeholder="412 345 678"'} ${req} style="flex:1 1 auto;min-width:0">`
+        + `</div>`;
     } else ctrl = `<input class="form-control" type="${f.type || 'text'}" id="${id}"${phAttr} ${req}>`;
     return `<div class="form-group"><label for="${id}">${escHtml(label)}${star}</label>${ctrl}</div>`;
   }).join('');
@@ -244,6 +264,12 @@ if (form) {
       else { const label = (lang === 'es' && f.labelEs) ? f.labelEs : (f.label || f.key); extras.push(label + ': ' + v); }
     });
     if (extras.length) payload.message = [payload.message, extras.join('\n')].filter(Boolean).join('\n');
+    // Teléfono: anteponer el código de país (salvo que el número ya lo traiga con +)
+    const ccEl = document.getElementById('wf-phone-cc');
+    if (ccEl && payload.phone && payload.phone.trim()[0] !== '+') {
+      const num = payload.phone.trim().replace(/^0+/, '').trim();  // quita el 0 troncal inicial
+      payload.phone = ccEl.value + ' ' + num;
+    }
     payload.attribution = buildAttribution(lang);
     if (btn) btn.disabled = true;
     if (!window.JKD_NO_BACKEND) fetch(CRM_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), keepalive: true }).catch(() => {});
