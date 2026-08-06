@@ -766,8 +766,8 @@ function sendFile(res, ext, buf, gz, longCache) {
   };
   const ctype = types[ext] || 'application/octet-stream';
   const cache = /image|font/.test(ctype) ? 'public, max-age=2592000'
-    : ext === '.html' ? 'no-cache'
-      : longCache ? 'public, max-age=3600'
+    : ext === '.html' ? (longCache ? 'public, max-age=0, s-maxage=600, stale-while-revalidate=86400' : 'no-cache')
+      : longCache ? 'public, max-age=31536000, immutable'
         : 'no-cache';
   const textual = /text\/|javascript|json|xml|svg/.test(ctype);
   const headers = { 'Content-Type': ctype, 'Cache-Control': cache, 'Vary': 'Accept-Encoding' };
