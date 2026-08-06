@@ -12,10 +12,18 @@
   // No disparar en entornos locales/preview para no ensuciar las cuentas reales.
   if (host === 'localhost' || host === '127.0.0.1' || host === '' || /\.local$/.test(host)) return;
 
-  fetch('/api/public/site-config', { credentials: 'omit' })
-    .then(function (r) { return r.json(); })
-    .then(function (cfg) { if (cfg && cfg.enabled) init(cfg); })
-    .catch(function () {});
+  function boot() {
+    fetch('/api/public/site-config', { credentials: 'omit' })
+      .then(function (r) { return r.json(); })
+      .then(function (cfg) { if (cfg && cfg.enabled) init(cfg); })
+      .catch(function () {});
+  }
+  // Diferir la analítica fuera de la carga crítica (mejor LCP/TBT): en la 1ª interacción o al quedar el navegador libre tras cargar.
+  var started = false;
+  function go() { if (started) return; started = true; boot(); }
+  ['pointerdown', 'keydown', 'touchstart', 'scroll'].forEach(function (ev) { addEventListener(ev, go, { once: true, passive: true }); });
+  function whenIdle() { (window.requestIdleCallback || function (f) { return setTimeout(f, 1500); })(go, { timeout: 4000 }); }
+  if (document.readyState === 'complete') whenIdle(); else addEventListener('load', whenIdle);
 
   function loadScript(src) {
     var s = document.createElement('script'); s.async = true; s.src = src;
