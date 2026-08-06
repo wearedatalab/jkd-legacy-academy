@@ -742,12 +742,13 @@ textarea.form-control { min-height: 128px; resize: vertical; }
 /* Arriba del pliegue (héroe/encabezado): la entrada corre por CSS en la carga, NO espera al JS.
    Así el LCP/FCP no quedan gated por el script (antes el héroe estaba en opacity:0 hasta correr el JS). */
 @media (prefers-reduced-motion: no-preference) {
-  .hero .reveal, .page-header .reveal { animation: revealRise var(--t-slow) both; }
-  .hero .reveal.delay-1, .page-header .reveal.delay-1 { animation-delay: 90ms; }
-  .hero .reveal.delay-2, .page-header .reveal.delay-2 { animation-delay: 180ms; }
-  .hero .reveal.delay-3, .page-header .reveal.delay-3 { animation-delay: 270ms; }
+  /* opacity:1 desde el inicio → el texto pinta ya (LCP = FCP); solo animamos el desplazamiento */
+  .hero .reveal, .page-header .reveal { opacity: 1; transform: none; animation: revealRise 600ms var(--e) both; }
+  .hero .reveal.delay-1, .page-header .reveal.delay-1 { animation-delay: 80ms; }
+  .hero .reveal.delay-2, .page-header .reveal.delay-2 { animation-delay: 160ms; }
+  .hero .reveal.delay-3, .page-header .reveal.delay-3 { animation-delay: 240ms; }
 }
-@keyframes revealRise { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+@keyframes revealRise { from { transform: translateY(22px); } to { transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
