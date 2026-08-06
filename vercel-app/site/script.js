@@ -203,9 +203,8 @@ const PHONE_CODES = [
   ['KR', '+82', 'South Korea'], ['DE', '+49', 'Germany'], ['FR', '+33', 'France'], ['IT', '+39', 'Italy'],
   ['PT', '+351', 'Portugal'], ['ZA', '+27', 'South Africa'], ['AE', '+971', 'UAE'],
 ];
-const flagEmoji = (iso) => iso.replace(/./g, (ch) => String.fromCodePoint(127397 + ch.charCodeAt(0)));
 const phoneCcOptions = () => PHONE_CODES.map(([iso, dial, name]) =>
-  `<option value="${dial}"${iso === 'AU' ? ' selected' : ''}>${flagEmoji(iso)} ${dial} · ${name}</option>`).join('');
+  `<option value="${dial}"${iso === 'AU' ? ' selected' : ''}>${dial} · ${name}</option>`).join('');
 
 let formFields = [];
 async function renderWebForm() {
@@ -234,9 +233,10 @@ async function renderWebForm() {
       const opts = (lang === 'es' && f.optionsEs && f.optionsEs.length) ? f.optionsEs : (f.options || []);
       ctrl = `<select class="form-control" id="${id}" ${req}><option value="">${escHtml(phv || ph)}</option>${opts.map((o) => `<option>${escHtml(o)}</option>`).join('')}</select>`;
     } else if (f.type === 'tel') {
-      ctrl = `<div style="display:flex;gap:8px;align-items:stretch">`
-        + `<select class="form-control" id="${id}-cc" aria-label="Código de país" style="flex:0 0 auto;width:150px;max-width:45%">${phoneCcOptions()}</select>`
-        + `<input class="form-control" type="tel" id="${id}" inputmode="tel"${phAttr || ' placeholder="412 345 678"'} ${req} style="flex:1 1 auto;min-width:0">`
+      // Teléfono = un solo control: código de país + número (unidos, sin banderas para verse bien en todos los sistemas)
+      ctrl = `<div style="display:flex;align-items:stretch">`
+        + `<select class="form-control" id="${id}-cc" aria-label="Código de país" style="flex:0 0 auto;width:158px;max-width:48%;border-top-right-radius:0;border-bottom-right-radius:0;border-right:none;padding-left:14px;padding-right:6px">${phoneCcOptions()}</select>`
+        + `<input class="form-control" type="tel" id="${id}" inputmode="tel"${phAttr || ' placeholder="412 345 678"'} ${req} style="flex:1 1 auto;min-width:0;border-top-left-radius:0;border-bottom-left-radius:0">`
         + `</div>`;
     } else ctrl = `<input class="form-control" type="${f.type || 'text'}" id="${id}"${phAttr} ${req}>`;
     return `<div class="form-group"><label for="${id}">${escHtml(label)}${star}</label>${ctrl}</div>`;
