@@ -426,6 +426,18 @@ export async function handle(req, res) {
   let p = url.pathname;
   const method = req.method;
 
+  // SEO: evitar contenido duplicado. El dominio por defecto de Vercel (*.vercel.app)
+  // redirige de forma permanente (301) al dominio canónico. No afecta a jkdlegacy.com.au
+  // (no termina en .vercel.app, sin bucle) ni al correo. Preserva ruta y query, incluido /crm.
+  const reqHost = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(':')[0].toLowerCase();
+  if (IS_PROD && reqHost.endsWith('.vercel.app')) {
+    res.writeHead(301, {
+      Location: 'https://jkdlegacy.com.au' + url.pathname + url.search,
+      'Cache-Control': 'public, max-age=3600',
+    });
+    return res.end();
+  }
+
   const isCrm = p === '/crm' || p.startsWith('/crm/');
   if (isCrm) p = p.slice(4) || '/';
   setSecurityHeaders(res, isCrm);
