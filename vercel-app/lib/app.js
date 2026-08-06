@@ -22,6 +22,9 @@ const PUBLIC_DIR = PUBLIC_CANDIDATES.find((d) => { try { return fs.existsSync(d)
 const SITE_CANDIDATES = [process.env.SITE_DIR, path.join(ROOT, 'site'), path.join(ROOT, '..', 'jkd-legacy-redesign')].filter(Boolean);
 const SITE_DIR = SITE_CANDIDATES.find((d) => { try { return fs.existsSync(d); } catch { return false; } }) || SITE_CANDIDATES[SITE_CANDIDATES.length - 1];
 const IS_PROD = !!(process.env.VERCEL || process.env.NODE_ENV === 'production');
+// Versión de assets para cache-busting: en Vercel el mtime de archivos es constante,
+// así que usamos el SHA del commit / id de deploy (cambia en cada despliegue).
+const ASSET_VER = (process.env.VERCEL_GIT_COMMIT_SHA || process.env.VERCEL_DEPLOYMENT_ID || '').slice(0, 12);
 
 // ---------------- Constants ----------------
 const STATUSES = ['registrado', 'contactado', 'ganado', 'perdido'];
@@ -339,7 +342,7 @@ async function injectHead(html, seo) {
   let out = html.replace('</head>', head + '</head>');
   out = out.replace(/(<link rel="canonical" href=")[^"]*(">)/, `$1${canon}$2`);
   if (isEs) out = out.replace('<html lang="en">', '<html lang="es">');
-  const v = (n) => { try { return Math.floor(fs.statSync(path.join(SITE_DIR, n)).mtimeMs); } catch (e) { return '1'; } };
+  const v = (n) => ASSET_VER || (() => { try { return Math.floor(fs.statSync(path.join(SITE_DIR, n)).mtimeMs); } catch (e) { return '1'; } })();
   out = out.replace('href="styles.css"', 'href="styles.css?v=' + v('styles.css') + '"')
     .replace('src="i18n.js"', 'src="i18n.js?v=' + v('i18n.js') + '"')
     .replace('src="script.js"', 'src="script.js?v=' + v('script.js') + '"')
