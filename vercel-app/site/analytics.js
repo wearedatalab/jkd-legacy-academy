@@ -22,8 +22,8 @@
   var started = false;
   function go() { if (started) return; started = true; boot(); }
   ['pointerdown', 'keydown', 'touchstart', 'scroll'].forEach(function (ev) { addEventListener(ev, go, { once: true, passive: true }); });
-  function whenIdle() { (window.requestIdleCallback || function (f) { return setTimeout(f, 1500); })(go, { timeout: 4000 }); }
-  if (document.readyState === 'complete') whenIdle(); else addEventListener('load', whenIdle);
+  function later() { setTimeout(go, 4000); } // tras la carga: fuera de la ventana crítica; los usuarios que interactúan se registran antes
+  if (document.readyState === 'complete') later(); else addEventListener('load', later);
 
   function loadScript(src) {
     var s = document.createElement('script'); s.async = true; s.src = src;

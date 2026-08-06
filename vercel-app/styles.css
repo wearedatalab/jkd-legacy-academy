@@ -742,7 +742,7 @@ textarea.form-control { min-height: 128px; resize: vertical; }
 /* Arriba del pliegue (héroe/encabezado): la entrada corre por CSS en la carga, NO espera al JS.
    Así el LCP/FCP no quedan gated por el script (antes el héroe estaba en opacity:0 hasta correr el JS). */
 @media (prefers-reduced-motion: no-preference) {
-  .hero .reveal, .page-header .reveal { animation: revealRise var(--t-slow) var(--e) both; }
+  .hero .reveal, .page-header .reveal { animation: revealRise var(--t-slow) both; }
   .hero .reveal.delay-1, .page-header .reveal.delay-1 { animation-delay: 90ms; }
   .hero .reveal.delay-2, .page-header .reveal.delay-2 { animation-delay: 180ms; }
   .hero .reveal.delay-3, .page-header .reveal.delay-3 { animation-delay: 270ms; }
