@@ -136,6 +136,9 @@ async function doInit() {
   await ensureSchema();
   await seed();
   await ensureSettings();
+  // Limpieza: elimina redirecciones malformadas (origen con URL completa, p. ej. "/https://…"),
+  // que nunca hacen match y ensucian el panel. Un origen válido jamás empieza por "/http".
+  try { await db.run("DELETE FROM redirects WHERE from_path LIKE '/http%'"); } catch (e) {}
 }
 async function ensureSchema() {
   await db.execMany([
@@ -224,6 +227,10 @@ function escAttr(s) { return String(s).replace(/&/g, '&amp;').replace(/"/g, '&qu
 function normFrom(s) {
   s = String(s || '').trim();
   if (!s) return '';
+  // Si pegan una URL completa (https://dominio/ruta), quédate solo con la ruta:
+  // evita orígenes tipo "/https://jkdlegacy.com.au/legacy" que nunca hacen match.
+  const u = s.match(/^https?:\/\/[^/]+(\/[^\s]*)?$/i);
+  if (u) s = u[1] || '/';
   s = s.split('#')[0].split('?')[0];
   if (!s.startsWith('/')) s = '/' + s;
   if (s.length > 1) s = s.replace(/\/+$/, '') || '/';
@@ -236,9 +243,21 @@ function normTo(s) {
   if (!s.startsWith('/')) s = '/' + s;
   return s;
 }
+// Redirecciones de migración (WordPress viejo → sitio nuevo). En código = permanentes y versionadas.
+// La BD (panel admin) tiene prioridad: el cliente puede sobrescribir cualquiera de estas desde el panel.
+const MIGRATION_REDIRECTS = {
+  '/thank-you': '/thanks',
+  '/the-philosophy': '/the-way',
+  '/book-now': '/join-the-family',
+  '/contact-us': '/join-the-family',
+  '/category/uncategorized': '/',
+};
 async function findRedirect(pathname) {
   const key = pathname.length > 1 ? (pathname.replace(/\/+$/, '') || '/') : pathname;
-  return (await db.get('SELECT id, to_path, code FROM redirects WHERE active=1 AND from_path=? LIMIT 1', [key])) || null;
+  const row = await db.get('SELECT id, to_path, code FROM redirects WHERE active=1 AND from_path=? LIMIT 1', [key]);
+  if (row) return row;
+  if (MIGRATION_REDIRECTS[key]) return { id: 0, to_path: MIGRATION_REDIRECTS[key], code: 301 };
+  return null;
 }
 
 // ---------------- SEO head injection (marketing) ----------------
@@ -454,6 +473,14 @@ export async function handle(req, res) {
         return res.end();
       }
     }
+  }
+
+  // Canonicalización SEO: quitar la barra final (301). Una sola regla arregla /legacy/, /the-way/,
+  // /join-the-family/… (los assets se referencian relativos → con barra el navegador los pide mal y
+  // la página sale sin CSS/imágenes). También evita contenido duplicado con/sin barra.
+  if (!isCrm && (method === 'GET' || method === 'HEAD') && p !== '/' && p.endsWith('/') && !p.startsWith('/api/')) {
+    res.writeHead(301, { Location: (p.replace(/\/+$/, '') || '/') + url.search, 'Cache-Control': 'public, max-age=3600' });
+    return res.end();
   }
 
   // Clean URLs: 301 de /foo.html → /foo
