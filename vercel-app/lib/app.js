@@ -11,7 +11,7 @@ import zlib from 'node:zlib';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import * as db from './db.js';
-import { sendMagicLink } from './email.js';
+import { sendMagicLink, sendLeadNotification } from './email.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');                      // …/jkd-legacy-crm (o raíz en Vercel)
@@ -537,6 +537,24 @@ export async function handle(req, res) {
         [cap(b.first_name, 120), cap(b.last_name, 120), email, cap(b.phone, 60), cap(b.location, 120), cap(b.experience, 80), cap(b.message, 2000), cap(b.source, 60) || 'website', attribution, t, t]);
       const ch = (b.attribution && typeof b.attribution === 'object' && b.attribution.channel) ? ` · ${String(b.attribution.channel).slice(0, 60)}` : '';
       await db.run(`INSERT INTO lead_events (lead_id,type,to_status,note,created_at) VALUES (?, 'created','registrado',?, ?)`, [r.lastInsertRowid, 'Recibido desde el sitio web' + ch, t]);
+      // Notifica por correo a TODOS los administradores (best-effort: nunca rompe la captura del lead).
+      try {
+        const admins = await db.all("SELECT email FROM users WHERE role='admin' AND active=1");
+        const to = admins.map((a) => a.email).filter(Boolean);
+        if (to.length) {
+          await sendLeadNotification({
+            to,
+            crmLink: `${baseUrl(req)}/crm`,
+            lead: {
+              first_name: cap(b.first_name, 120), last_name: cap(b.last_name, 120), email,
+              phone: cap(b.phone, 60), location: cap(b.location, 120), experience: cap(b.experience, 80),
+              message: cap(b.message, 2000), source: cap(b.source, 60) || 'website',
+              channel: (b.attribution && typeof b.attribution === 'object' && b.attribution.channel) ? String(b.attribution.channel).slice(0, 60) : null,
+              created_label: new Date(t).toLocaleString('es-CO', { timeZone: 'Australia/Melbourne', dateStyle: 'medium', timeStyle: 'short' }),
+            },
+          });
+        }
+      } catch (e) { /* no romper la captura del lead si el correo falla */ }
       return json(res, 201, { ok: true, id: r.lastInsertRowid });
     }
     return json(res, 405, { error: 'method' });
