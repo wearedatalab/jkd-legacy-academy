@@ -1,38 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- The JKD Legacy Academy — sitemap.xml
-     Buenas prácticas 2026: solo <loc> + <lastmod> + alternates hreflang.
-     Se omiten <changefreq> y <priority> a propósito (Google los ignora desde hace años).
-     El ES se sirve en la misma URL con ?lang=es (i18n en cliente) → alternate reciproco con el on-page.
-     Páginas noindex (/thanks, /404) quedan fuera del sitemap deliberadamente.
-     Cambia el dominio si publicas en otro distinto a jkdlegacy.com.au -->
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:xhtml="http://www.w3.org/1999/xhtml">
-  <url>
-    <loc>https://jkdlegacy.com.au/</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://jkdlegacy.com.au/"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://jkdlegacy.com.au/?lang=es"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://jkdlegacy.com.au/"/>
-    <lastmod>2026-08-10</lastmod>
-  </url>
-  <url>
-    <loc>https://jkdlegacy.com.au/legacy</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://jkdlegacy.com.au/legacy"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://jkdlegacy.com.au/legacy?lang=es"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://jkdlegacy.com.au/legacy"/>
-    <lastmod>2026-08-10</lastmod>
-  </url>
-  <url>
-    <loc>https://jkdlegacy.com.au/the-way</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://jkdlegacy.com.au/the-way"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://jkdlegacy.com.au/the-way?lang=es"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://jkdlegacy.com.au/the-way"/>
-    <lastmod>2026-08-10</lastmod>
-  </url>
-  <url>
-    <loc>https://jkdlegacy.com.au/join-the-family</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://jkdlegacy.com.au/join-the-family"/>
-    <xhtml:link rel="alternate" hreflang="es" href="https://jkdlegacy.com.au/join-the-family?lang=es"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://jkdlegacy.com.au/join-the-family"/>
-    <lastmod>2026-08-10</lastmod>
-  </url>
-</urlset>
+<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>
+<!-- Índice de sitemaps (estilo Yoast SEO). robots.txt apunta aquí y Google sigue a los hijos.
+     Añade nuevos sitemaps hijos (p. ej. post-sitemap.xml) aquí cuando crees más tipos de contenido. -->
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <sitemap>
+    <loc>https://jkdlegacy.com.au/page-sitemap.xml</loc>
+    <lastmod>2026-08-10T09:00:00+10:00</lastmod>
+  </sitemap>
+</sitemapindex>

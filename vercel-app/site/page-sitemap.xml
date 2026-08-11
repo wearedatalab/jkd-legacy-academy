@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>
+<!-- Sitemap de páginas (estilo Yoast SEO): <loc> + <lastmod> (fecha+hora W3C) + hreflang + imágenes.
+     Sin <changefreq>/<priority> (Google los ignora). ES = misma URL con ?lang=es (i18n en cliente).
+     /thanks y /404 se omiten a propósito: son noindex. -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>https://jkdlegacy.com.au/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://jkdlegacy.com.au/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://jkdlegacy.com.au/?lang=es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://jkdlegacy.com.au/"/>
+    <lastmod>2026-08-10T09:00:00+10:00</lastmod>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/bruce.jpg</image:loc></image:image>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/vargas.jpg</image:loc></image:image>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/training-3.jpg</image:loc></image:image>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/poteet-wide.jpg</image:loc></image:image>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/inosanto-wide.jpg</image:loc></image:image>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/kimura-wide.jpg</image:loc></image:image>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/bustillo-wide.jpg</image:loc></image:image>
+  </url>
+  <url>
+    <loc>https://jkdlegacy.com.au/legacy</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://jkdlegacy.com.au/legacy"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://jkdlegacy.com.au/legacy?lang=es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://jkdlegacy.com.au/legacy"/>
+    <lastmod>2026-08-10T09:00:00+10:00</lastmod>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/bruce.jpg</image:loc></image:image>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/kimura-wide.jpg</image:loc></image:image>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/poteet-wide.jpg</image:loc></image:image>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/glover-wide.jpg</image:loc></image:image>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/ted-wong-wide.jpg</image:loc></image:image>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/george-lee-wide.jpg</image:loc></image:image>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/inosanto-wide.jpg</image:loc></image:image>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/bustillo-wide.jpg</image:loc></image:image>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/vargas.jpg</image:loc></image:image>
+  </url>
+  <url>
+    <loc>https://jkdlegacy.com.au/the-way</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://jkdlegacy.com.au/the-way"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://jkdlegacy.com.au/the-way?lang=es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://jkdlegacy.com.au/the-way"/>
+    <lastmod>2026-08-10T09:00:00+10:00</lastmod>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/the-way-hero.jpg</image:loc></image:image>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/training-3.jpg</image:loc></image:image>
+  </url>
+  <url>
+    <loc>https://jkdlegacy.com.au/join-the-family</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://jkdlegacy.com.au/join-the-family"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://jkdlegacy.com.au/join-the-family?lang=es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://jkdlegacy.com.au/join-the-family"/>
+    <lastmod>2026-08-10T09:00:00+10:00</lastmod>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/ins-peter.jpg</image:loc></image:image>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/ins-thomas.jpg</image:loc></image:image>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/ins-paul.jpg</image:loc></image:image>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/ins-mattia.jpg</image:loc></image:image>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/ins-neko.jpg</image:loc></image:image>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/training-1.jpg</image:loc></image:image>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/vargas.jpg</image:loc></image:image>
+  </url>
+</urlset>
