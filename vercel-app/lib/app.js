@@ -272,7 +272,9 @@ function migrationTarget(pathname) {
   // Sufijos raros (p. ej. /legacy//1000 → /legacy/1000): usa el primer segmento si es conocido
   const seg = p.split('/')[1] || '';
   if (seg && MIGRATION_REDIRECTS['/' + seg]) return MIGRATION_REDIRECTS['/' + seg]; // /contact-us/1000 → /join-the-family
-  if (REAL_PAGES.includes(seg)) return '/' + seg;               // /legacy/1000 → /legacy
+  // /legacy/1000 → /legacy. El trailing-slash PURO (/legacy/) NO lo tocamos aquí: lo maneja la regla
+  // de barra final, que sí preserva el query (?lang=es) → evita mandar la versión ES a la EN.
+  if (REAL_PAGES.includes(seg) && p !== '/' + seg) return '/' + seg;
   return null;
 }
 async function findRedirect(pathname) {
@@ -504,7 +506,8 @@ export async function handle(req, res) {
   if (!isCrm && (method === 'GET' || method === 'HEAD') && !p.startsWith('/api/')) {
     const mt = migrationTarget(url.pathname);
     if (mt && mt !== p) {
-      res.writeHead(301, { Location: mt, 'Cache-Control': 'public, max-age=86400' });
+      // Conserva el query en destinos de página (p. ej. ?lang=es → /legacy?lang=es); al home va limpio.
+      res.writeHead(301, { Location: mt === '/' ? '/' : mt + url.search, 'Cache-Control': 'public, max-age=86400' });
       return res.end();
     }
   }
