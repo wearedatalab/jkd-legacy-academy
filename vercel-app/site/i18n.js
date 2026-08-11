@@ -947,12 +947,12 @@ function setLang(lang) {
 
 // Initialize on load
 (function initI18n() {
-  // Prioridad de idioma: ?lang= (para hreflang/SEO)  >  guardado  >  navegador
+  // Prioridad de idioma: ?lang= (para hreflang/SEO)  >  elección guardada  >  INGLÉS por defecto.
+  // No autodetectamos el idioma del navegador: la página sale primero en inglés para todos los visitantes.
   const urlLang = new URLSearchParams(location.search).get('lang');
   const saved = localStorage.getItem('jkd-lang');
-  const browser = (navigator.language || 'en').toLowerCase().startsWith('es') ? 'es' : 'en';
   const valid = urlLang && window.I18N[urlLang] ? urlLang : null;
-  const lang = valid || saved || browser;
+  const lang = valid || saved || 'en';
   if (valid) localStorage.setItem('jkd-lang', valid);
   document.addEventListener('DOMContentLoaded', () => {
     applyI18n(lang);
