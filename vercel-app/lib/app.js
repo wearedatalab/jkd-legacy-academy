@@ -250,8 +250,31 @@ const MIGRATION_REDIRECTS = {
   '/the-philosophy': '/the-way',
   '/book-now': '/join-the-family',
   '/contact-us': '/join-the-family',
+  '/services': '/the-way',
   '/category/uncategorized': '/',
 };
+// Páginas reales del sitio nuevo (para no redirigirlas por error y para el fallback de "primer segmento").
+const REAL_PAGES = ['legacy', 'the-way', 'join-the-family', 'thanks'];
+// Destino de migración para CUALQUIER ruta vieja (incluye assets .js, rutas con // dobles,
+// /feed, /author, /category, /tag, archivos de fecha /2019/10/, wp-*, etc.). Devuelve null si no aplica.
+// Manda a una página ÚTIL del sitio nuevo; la basura de WordPress sin equivalente va al home.
+function migrationTarget(pathname) {
+  let p = String(pathname || '/').replace(/\/{2,}/g, '/');        // colapsa // → /
+  if (p.length > 1) p = p.replace(/\/+$/, '') || '/';             // quita barra final
+  if (p === '/') return null;                                     // el home nunca se redirige
+  if (MIGRATION_REDIRECTS[p]) return MIGRATION_REDIRECTS[p];      // páginas renombradas exactas
+  // Infraestructura de WordPress viejo sin equivalente → home
+  if (/^\/wp-(includes|content|admin|json)(\/|$)/i.test(p)) return '/';
+  if (/^\/wp-[\w-]+\.php$/i.test(p) || p === '/xmlrpc.php') return '/';   // wp-login.php, etc.
+  if (p === '/feed' || /\/feed$/.test(p)) return '/';            // /feed y /category/x/feed
+  if (/^\/(author|category|tag)\//i.test(p)) return '/';         // archivos de autor / taxonomías
+  if (/^\/\d{4}(\/\d{2}){0,2}$/.test(p)) return '/';             // archivos de fecha: /2019, /2019/10, /2019/10/05
+  // Sufijos raros (p. ej. /legacy//1000 → /legacy/1000): usa el primer segmento si es conocido
+  const seg = p.split('/')[1] || '';
+  if (seg && MIGRATION_REDIRECTS['/' + seg]) return MIGRATION_REDIRECTS['/' + seg]; // /contact-us/1000 → /join-the-family
+  if (REAL_PAGES.includes(seg)) return '/' + seg;               // /legacy/1000 → /legacy
+  return null;
+}
 async function findRedirect(pathname) {
   const key = pathname.length > 1 ? (pathname.replace(/\/+$/, '') || '/') : pathname;
   const row = await db.get('SELECT id, to_path, code FROM redirects WHERE active=1 AND from_path=? LIMIT 1', [key]);
@@ -472,6 +495,17 @@ export async function handle(req, res) {
         res.writeHead(rd.code || 301, { Location: loc, 'Cache-Control': 'no-cache' });
         return res.end();
       }
+    }
+  }
+
+  // Migración de URLs viejas de WordPress → página útil del sitio nuevo (para que Search Console no
+  // reporte errores). Cubre assets .js viejos, rutas con // dobles, /feed, /author, /category, /tag,
+  // archivos de fecha (/2019/10/), wp-login.php, /wp-includes|content|admin|json/…, sufijos raros, etc.
+  if (!isCrm && (method === 'GET' || method === 'HEAD') && !p.startsWith('/api/')) {
+    const mt = migrationTarget(url.pathname);
+    if (mt && mt !== p) {
+      res.writeHead(301, { Location: mt, 'Cache-Control': 'public, max-age=86400' });
+      return res.end();
     }
   }
 
