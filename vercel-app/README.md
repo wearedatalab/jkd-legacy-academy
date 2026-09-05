@@ -3,10 +3,8 @@
 Despliegue serverless del sitio + CRM. **Root Directory en Vercel: `vercel-app`**.
 
 ## Variables de entorno requeridas
-- `TURSO_DATABASE_URL` — URL libsql:// de la base Turso
-- `TURSO_AUTH_TOKEN` — token de la base Turso
-- `RESEND_API_KEY` — API key de Resend (envío del magic link)
-- `MAIL_FROM` — remitente, p. ej. `JKD Legacy <no-reply@jkdlegacy.com.au>` (o `onboarding@resend.dev` para probar)
-- `APP_URL` — URL pública del sitio (p. ej. `https://jkdlegacy.com.au`)
+- `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` — base Turso
+- `RESEND_API_KEY`, `MAIL_FROM` — envío de correo (magic link + notificación de leads)
+- `ADMIN_EMAIL` — buzón admin donde llega el magic link
 
-La BD se inicializa sola (crea tablas + siembra usuarios admin/comercial) en el primer arranque.
+La BD se inicializa sola en el primer arranque.

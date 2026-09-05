@@ -13,6 +13,7 @@
   --green:#3fae72; --green-soft:rgba(63,174,114,.16);
   --red:#d2483b; --red-soft:rgba(210,72,59,.16);
   --amber:#d9a441;
+  --violet:#8b7ff0; --violet-soft:rgba(139,127,240,.16);
   --serif:'Fraunces',Georgia,serif; --sans:'Inter',system-ui,sans-serif; --mono:'Space Mono',monospace;
   --r:10px; --r-lg:14px;
   --e:cubic-bezier(.22,1,.36,1);
@@ -120,7 +121,7 @@ input,select,textarea{font-family:inherit}
 .rd-arrow{color:var(--accent);font-family:var(--mono)}
 
 /* ---------- KANBAN ---------- */
-.kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;align-items:start}
+.kanban{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;align-items:start}
 .col{background:var(--ink-2);border:1px solid var(--line);border-radius:var(--r-lg);display:flex;flex-direction:column;min-height:200px}
 .col.drop{border-color:var(--accent);background:rgba(47,123,224,.06)}
 .col-head{display:flex;align-items:center;gap:9px;padding:15px 16px;border-bottom:1px solid var(--line);position:sticky;top:0}
@@ -160,6 +161,7 @@ td .lead-nm{font-family:var(--serif);color:var(--text);font-size:1rem}
 .status-pill{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:.58rem;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:100px}
 .st-registrado{background:var(--accent-soft);color:var(--accent-2)}
 .st-contactado{background:var(--brass-soft);color:var(--brass)}
+.st-sesion_free{background:var(--violet-soft);color:var(--violet)}
 .st-ganado{background:var(--green-soft);color:var(--green)}
 .st-perdido{background:var(--red-soft);color:var(--red)}
 /* ---------- PAGINATION (leads table) ---------- */
@@ -287,7 +289,7 @@ td .lead-nm{font-family:var(--serif);color:var(--text);font-size:1rem}
 .tl::before{content:'';position:absolute;left:6px;top:16px;bottom:0;width:1px;background:var(--line-2)}
 .tl:last-child::before{display:none}
 .tl .dot{width:13px;height:13px;border-radius:50%;border:2px solid var(--ink-2);background:var(--accent);flex-shrink:0;margin-top:3px;z-index:1}
-.tl.created .dot{background:var(--mute)} .tl.ganado .dot{background:var(--green)} .tl.perdido .dot{background:var(--red)} .tl.contactado .dot{background:var(--brass)} .tl.note .dot{background:var(--accent)}
+.tl.created .dot{background:var(--mute)} .tl.ganado .dot{background:var(--green)} .tl.perdido .dot{background:var(--red)} .tl.contactado .dot{background:var(--brass)} .tl.sesion_free .dot{background:var(--violet)} .tl.note .dot{background:var(--accent)}
 .tl .body{flex:1}
 .tl .t{font-size:.85rem;color:var(--text);line-height:1.4}
 .tl .d{font-family:var(--mono);font-size:.6rem;color:var(--mute);letter-spacing:.06em;margin-top:2px}
@@ -299,6 +301,7 @@ td .lead-nm{font-family:var(--serif);color:var(--text);font-size:1rem}
 .ss.active{border-width:1px}
 .ss.active.registrado{background:var(--accent-soft);color:var(--accent-2);border-color:var(--accent)}
 .ss.active.contactado{background:var(--brass-soft);color:var(--brass);border-color:var(--brass)}
+.ss.active.sesion_free{background:var(--violet-soft);color:var(--violet);border-color:var(--violet)}
 .ss.active.ganado{background:var(--green-soft);color:var(--green);border-color:var(--green)}
 .ss.active.perdido{background:var(--red-soft);color:var(--red);border-color:var(--red)}
 

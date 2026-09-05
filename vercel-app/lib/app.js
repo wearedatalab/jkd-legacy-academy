@@ -27,7 +27,7 @@ const IS_PROD = !!(process.env.VERCEL || process.env.NODE_ENV === 'production');
 const ASSET_VER = (process.env.VERCEL_GIT_COMMIT_SHA || process.env.VERCEL_DEPLOYMENT_ID || '').slice(0, 12);
 
 // ---------------- Constants ----------------
-const STATUSES = ['registrado', 'contactado', 'ganado', 'perdido'];
+const STATUSES = ['registrado', 'contactado', 'sesion_free', 'ganado', 'perdido'];
 const LOSS_REASONS = {
   no_responde: 'No responde',
   fuera_zona: 'No vive en la zona de influencia',
