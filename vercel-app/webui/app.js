@@ -8,7 +8,7 @@ const state = { me: null, meta: null, leads: [], users: [], view: 'kanban', filt
 const STATUS_META = {
   registrado: { label: 'Registrado', color: 'var(--accent)', cls: 'registrado' },
   contactado: { label: 'Contactado', color: 'var(--brass)', cls: 'contactado' },
-  sesion_free: { label: 'Sesión Free', color: 'var(--violet)', cls: 'sesion_free' },
+  sesion_free: { label: 'Session Free', color: 'var(--violet)', cls: 'sesion_free' },
   ganado:     { label: 'Ganado',     color: 'var(--green)', cls: 'ganado' },
   perdido:    { label: 'Perdido',    color: 'var(--red)',   cls: 'perdido' },
 };
