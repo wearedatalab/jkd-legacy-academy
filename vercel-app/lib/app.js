@@ -468,8 +468,11 @@ async function buildStats(monthArg) {
   for (let i = 5; i >= 0; i--) months.push(new Date(d0.getFullYear(), d0.getMonth() - i, 1).toISOString().slice(0, 7));
   const map = (rows) => Object.fromEntries(rows.map((r) => [r.m, Number(r.c)]));
   const cM = map(await db.all(`SELECT substr(created_at,1,7) m, COUNT(*) c FROM leads GROUP BY m`));
-  const wM = map(await db.all(`SELECT substr(created_at,1,7) m, COUNT(*) c FROM lead_events WHERE type='status' AND to_status='ganado' GROUP BY m`));
-  const lM = map(await db.all(`SELECT substr(created_at,1,7) m, COUNT(*) c FROM lead_events WHERE type='status' AND to_status='perdido' GROUP BY m`));
+  // Ganados/perdidos por mes = leads que HOY están en ese estado, atribuidos al mes de su ÚLTIMA
+  // transición a él. Así reconcilia con el pipeline (suma mensual = total actual) y no se infla por
+  // transiciones intermedias (p. ej. un lead ganado→perdido ya NO cuenta como ganado).
+  const wM = map(await db.all(`SELECT substr(t,1,7) m, COUNT(*) c FROM (SELECT MAX(e.created_at) t FROM leads l JOIN lead_events e ON e.lead_id=l.id AND e.type='status' AND e.to_status='ganado' WHERE l.status='ganado' GROUP BY l.id) GROUP BY m`));
+  const lM = map(await db.all(`SELECT substr(t,1,7) m, COUNT(*) c FROM (SELECT MAX(e.created_at) t FROM leads l JOIN lead_events e ON e.lead_id=l.id AND e.type='status' AND e.to_status='perdido' WHERE l.status='perdido' GROUP BY l.id) GROUP BY m`));
   const monthly = months.map((m) => {
     const created = cM[m] || 0, won = wM[m] || 0, lost = lM[m] || 0;
     const resolved = won + lost;
@@ -481,12 +484,12 @@ async function buildStats(monthArg) {
 
   let won, lost;
   if (month) {
-    won = Number((await db.get(`SELECT COUNT(*) c FROM lead_events WHERE type='status' AND to_status='ganado' AND substr(created_at,1,7)='${month}'`)).c);
-    lost = Number((await db.get(`SELECT COUNT(*) c FROM lead_events WHERE type='status' AND to_status='perdido' AND substr(created_at,1,7)='${month}'`)).c);
+    won = Number((await db.get(`SELECT COUNT(*) c FROM (SELECT MAX(e.created_at) t FROM leads l JOIN lead_events e ON e.lead_id=l.id AND e.type='status' AND e.to_status='ganado' WHERE l.status='ganado' GROUP BY l.id) WHERE substr(t,1,7)=?`, [month])).c);
+    lost = Number((await db.get(`SELECT COUNT(*) c FROM (SELECT MAX(e.created_at) t FROM leads l JOIN lead_events e ON e.lead_id=l.id AND e.type='status' AND e.to_status='perdido' WHERE l.status='perdido' GROUP BY l.id) WHERE substr(t,1,7)=?`, [month])).c);
   } else { won = funnel.ganado; lost = funnel.perdido; }
   const winRate = won + lost ? Math.round((won / (won + lost)) * 100) : 0;
   const newThisMonth = month ? total : (cM[months[months.length - 1]] || 0);
-  const active = funnel.registrado + funnel.contactado;
+  const active = funnel.registrado + funnel.contactado + (funnel.sesion_free || 0); // "en proceso" incluye Session Free
   return { funnel, total, monthly, lossBreakdown, availableMonths, month, kpi: { total, newThisMonth, winRate, active, won, lost } };
 }
 
