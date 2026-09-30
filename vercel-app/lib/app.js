@@ -11,7 +11,7 @@ import zlib from 'node:zlib';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import * as db from './db.js';
-import { sendMagicLink, sendLeadNotification } from './email.js';
+import { sendMagicLink, sendLeadNotification, sendTaskReminder } from './email.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');                      // …/jkd-legacy-crm (o raíz en Vercel)
@@ -150,9 +150,12 @@ async function ensureSchema() {
     `CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '', updated_at TEXT)`,
     `CREATE TABLE IF NOT EXISTS redirects (id INTEGER PRIMARY KEY, from_path TEXT NOT NULL UNIQUE, to_path TEXT NOT NULL, code INTEGER NOT NULL DEFAULT 301, active INTEGER NOT NULL DEFAULT 1, hits INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL)`,
     `CREATE TABLE IF NOT EXISTS rate_hits (bucket TEXT PRIMARY KEY, count INTEGER NOT NULL, window_start TEXT NOT NULL)`,
+    `CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY, lead_id INTEGER, title TEXT NOT NULL, due_at TEXT, status TEXT NOT NULL DEFAULT 'pendiente', owner_id INTEGER, created_by INTEGER, created_at TEXT NOT NULL, done_at TEXT)`,
     `CREATE INDEX IF NOT EXISTS idx_leads_updated ON leads(updated_at)`,
     `CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status)`,
     `CREATE INDEX IF NOT EXISTS idx_events_lead ON lead_events(lead_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status)`,
+    `CREATE INDEX IF NOT EXISTS idx_tasks_lead ON tasks(lead_id)`,
   ]);
   // Migraciones idempotentes para BDs preexistentes (columnas ya incluidas arriba en BDs nuevas)
   for (const stmt of ['ALTER TABLE leads ADD COLUMN attribution TEXT', 'ALTER TABLE sessions ADD COLUMN impersonator_id INTEGER']) {
@@ -419,6 +422,35 @@ async function verifyToken(t) {
 }
 
 // ---------------- Stats ----------------
+// Envía recordatorios por correo de las tareas pendientes que vencen dentro de 24 h o ya vencidas.
+// Agrupa por responsable (owner). Las tareas sin responsable van a los administradores. Devuelve conteos.
+async function sendTaskReminders() {
+  const cutoff = new Date(Date.now() + 24 * 3600 * 1000).toISOString();
+  const rows = await db.all(
+    `SELECT t.*, l.first_name lf, l.last_name ll, l.phone lphone
+     FROM tasks t LEFT JOIN leads l ON l.id=t.lead_id
+     WHERE t.status='pendiente' AND t.due_at IS NOT NULL AND t.due_at <= ?
+     ORDER BY datetime(t.due_at) ASC`, [cutoff]);
+  if (!rows.length) return { tasks: 0, emails: 0 };
+  const users = await db.all("SELECT id,name,email,role FROM users WHERE active=1");
+  const byId = {}; users.forEach((u) => { byId[u.id] = u; });
+  const admins = users.filter((u) => u.role === 'admin' && u.email);
+  const groups = new Map(); // email -> { name, tasks:[] }
+  const addTo = (u, t) => { if (!u || !u.email) return; if (!groups.has(u.email)) groups.set(u.email, { name: u.name, tasks: [] }); groups.get(u.email).tasks.push(t); };
+  for (const t of rows) {
+    const owner = t.owner_id ? byId[t.owner_id] : null;
+    if (owner && owner.email) addTo(owner, t);
+    else admins.forEach((a) => addTo(a, t));
+  }
+  const base = (process.env.APP_URL || 'https://jkdlegacy.com.au').replace(/\/+$/, '');
+  let emails = 0;
+  for (const [email, g] of groups) {
+    const r = await sendTaskReminder({ to: email, name: g.name, tasks: g.tasks, crmLink: base + '/crm#tasks' });
+    if (r && r.ok) emails++;
+  }
+  return { tasks: rows.length, emails };
+}
+
 async function buildStats(monthArg) {
   const distinct = (await db.all(`SELECT DISTINCT substr(created_at,1,7) m FROM leads WHERE created_at IS NOT NULL`)).map((r) => r.m);
   const curMonth = new Date().toISOString().slice(0, 7);
@@ -619,6 +651,18 @@ export async function handle(req, res) {
 
   // ---- Protected API ----
   if (p.startsWith('/api/')) {
+    // Cron de recordatorios de tareas (lo dispara Vercel Cron). No usa sesión: se autoriza con CRON_SECRET
+    // (Vercel envía "Authorization: Bearer <CRON_SECRET>" cuando esa env var existe). También acepta ?key=.
+    if (p === '/api/cron/task-reminders') {
+      const secret = process.env.CRON_SECRET;
+      if (!secret) return json(res, 503, { error: 'CRON_SECRET no configurado' });
+      const auth = String(req.headers['authorization'] || '');
+      const qkey = url.searchParams.get('key') || '';
+      if (auth !== 'Bearer ' + secret && qkey !== secret) return json(res, 401, { error: 'unauthorized' });
+      try { return json(res, 200, { ok: true, ...(await sendTaskReminders()) }); }
+      catch (e) { console.error('[cron] task-reminders', e?.message || e); return json(res, 500, { error: 'reminder failed' }); }
+    }
+
     const user = await currentUser(req);
     if (!user) return json(res, 401, { error: 'unauthorized' });
 
@@ -677,7 +721,8 @@ export async function handle(req, res) {
 
       if (!sub && method === 'GET') {
         const events = await db.all(`SELECT e.*, u.name user_name FROM lead_events e LEFT JOIN users u ON u.id=e.user_id WHERE e.lead_id=? ORDER BY datetime(e.created_at) ASC`, [id]);
-        return json(res, 200, { ...(await leadRow(lead)), events });
+        const tasks = await db.all(`SELECT t.*, u.name owner_name FROM tasks t LEFT JOIN users u ON u.id=t.owner_id WHERE t.lead_id=? ORDER BY (t.status='hecha'), (t.due_at IS NULL), datetime(t.due_at) ASC, t.id DESC`, [id]);
+        return json(res, 200, { ...(await leadRow(lead)), events, tasks });
       }
       if (!sub && method === 'PATCH') {
         const b = await readBody(req);
@@ -713,6 +758,60 @@ export async function handle(req, res) {
         await db.run('DELETE FROM lead_events WHERE lead_id=?', [id]);
         return json(res, 200, { ok: true });
       }
+    }
+
+    // ---- Tareas / recordatorios (ej. "llamar al lead en X tiempo") ----
+    if (p === '/api/tasks' && method === 'GET') {
+      const scope = url.searchParams.get('scope');                 // pendiente | hecha | (all)
+      const leadId = Number(url.searchParams.get('lead_id')) || null;
+      const clauses = [], args = [];
+      if (leadId) { clauses.push('t.lead_id=?'); args.push(leadId); }
+      if (scope === 'pendiente' || scope === 'hecha') { clauses.push('t.status=?'); args.push(scope); }
+      const where = clauses.length ? 'WHERE ' + clauses.join(' AND ') : '';
+      const rows = await db.all(
+        `SELECT t.*, l.first_name lead_first, l.last_name lead_last, l.status lead_status, u.name owner_name
+         FROM tasks t LEFT JOIN leads l ON l.id=t.lead_id LEFT JOIN users u ON u.id=t.owner_id
+         ${where} ORDER BY (t.status='hecha'), (t.due_at IS NULL), datetime(t.due_at) ASC, t.id DESC LIMIT 500`, args);
+      return json(res, 200, rows);
+    }
+    if (p === '/api/tasks' && method === 'POST') {
+      const b = await readBody(req);
+      const title = cap(b.title, 200);
+      if (!title) return json(res, 400, { error: 'título requerido' });
+      const leadId = b.lead_id ? Number(b.lead_id) : null;
+      if (leadId && !(await db.get('SELECT 1 FROM leads WHERE id=?', [leadId]))) return json(res, 400, { error: 'lead inválido' });
+      const d = b.due_at ? new Date(b.due_at) : null;
+      const due = d && !isNaN(d.getTime()) ? d.toISOString() : null;
+      const ownerId = b.owner_id ? Number(b.owner_id) : user.id;
+      const t = nowISO();
+      const r = await db.run('INSERT INTO tasks (lead_id,title,due_at,status,owner_id,created_by,created_at) VALUES (?,?,?,?,?,?,?)',
+        [leadId, title, due, 'pendiente', ownerId, user.id, t]);
+      if (leadId) await db.run(`INSERT INTO lead_events (lead_id,type,note,user_id,created_at) VALUES (?, 'note',?,?,?)`,
+        [leadId, 'Tarea creada: ' + title + (due ? ' · vence ' + new Date(due).toLocaleString('es-CO', { timeZone: 'Australia/Melbourne', dateStyle: 'medium', timeStyle: 'short' }) : ''), user.id, t]);
+      return json(res, 201, await db.get('SELECT * FROM tasks WHERE id=?', [r.lastInsertRowid]));
+    }
+    const taskMatch = p.match(/^\/api\/tasks\/(\d+)$/);
+    if (taskMatch) {
+      const id = Number(taskMatch[1]);
+      const task = await db.get('SELECT * FROM tasks WHERE id=?', [id]);
+      if (!task) return json(res, 404, { error: 'not found' });
+      if (method === 'PATCH') {
+        const b = await readBody(req);
+        const sets = [], vals = [];
+        if ('title' in b) { const ti = cap(b.title, 200); if (!ti) return json(res, 400, { error: 'título requerido' }); sets.push('title=?'); vals.push(ti); }
+        if ('due_at' in b) { const d = b.due_at ? new Date(b.due_at) : null; sets.push('due_at=?'); vals.push(d && !isNaN(d.getTime()) ? d.toISOString() : null); }
+        if ('owner_id' in b) { sets.push('owner_id=?'); vals.push(b.owner_id ? Number(b.owner_id) : null); }
+        if ('status' in b) {
+          const st = b.status === 'hecha' ? 'hecha' : 'pendiente';
+          sets.push('status=?'); vals.push(st);
+          sets.push('done_at=?'); vals.push(st === 'hecha' ? nowISO() : null);
+          if (task.lead_id && st !== task.status) await db.run(`INSERT INTO lead_events (lead_id,type,note,user_id,created_at) VALUES (?, 'note',?,?,?)`,
+            [task.lead_id, (st === 'hecha' ? 'Tarea completada: ' : 'Tarea reabierta: ') + task.title, user.id, nowISO()]);
+        }
+        if (sets.length) { vals.push(id); await db.run(`UPDATE tasks SET ${sets.join(',')} WHERE id=?`, vals); }
+        return json(res, 200, await db.get('SELECT * FROM tasks WHERE id=?', [id]));
+      }
+      if (method === 'DELETE') { await db.run('DELETE FROM tasks WHERE id=?', [id]); return json(res, 200, { ok: true }); }
     }
 
     // Users — proyección mínima para no-admin (no filtra correos/roles)

@@ -3,7 +3,7 @@
 // ============================================================
 const $ = (s, r = document) => r.querySelector(s);
 const root = $('#root');
-const state = { me: null, meta: null, leads: [], users: [], view: 'kanban', filter: 'all', q: '', leadsPage: 1, kLimit: {} };
+const state = { me: null, meta: null, leads: [], users: [], tasks: [], view: 'kanban', filter: 'all', q: '', leadsPage: 1, kLimit: {} };
 
 const STATUS_META = {
   registrado: { label: 'Registrado', color: 'var(--accent)', cls: 'registrado' },
@@ -28,6 +28,7 @@ const ICON = {
   eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>',
   redirect: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 10 20 15 15 20"/><path d="M4 4v7a4 4 0 0 0 4 4h12"/></svg>',
   config: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+  tasks: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
 };
 
 // ---------- utils ----------
@@ -106,6 +107,7 @@ function renderApp() {
   const navItems = [
     ['kanban', 'Pipeline', ICON.kanban],
     ['leads', 'Leads', ICON.leads],
+    ['tasks', 'Tareas', ICON.tasks],
     ['stats', 'Estadísticas', ICON.stats],
     ['users', 'Usuarios', ICON.users],
     ['redirects', 'Redirecciones', ICON.redirect],
@@ -123,7 +125,7 @@ function renderApp() {
       <nav id="nav">
         ${navItems.map(([k, label, icon]) => `
           <button class="nav-item ${state.view === k || (state.view === 'leadDetail' && k === 'leads') ? 'active' : ''}" data-view="${k}">
-            ${icon}<span>${label}</span>${k === 'leads' ? `<span class="badge" id="badge-leads"></span>` : ''}
+            ${icon}<span>${label}</span>${k === 'leads' ? `<span class="badge" id="badge-leads"></span>` : k === 'tasks' ? `<span class="badge" id="badge-tasks"></span>` : ''}
           </button>`).join('')}
       </nav>
       <div class="side-foot">
@@ -157,7 +159,8 @@ function renderApp() {
   });
 
   $('#badge-leads').textContent = state.leads.length || '';
-  const views = { kanban: viewKanban, leads: viewLeads, stats: viewStats, users: viewUsers, redirects: viewRedirects, config: viewSettings, leadDetail: () => viewLeadDetail(state.detailId) };
+  paintTaskBadge();
+  const views = { kanban: viewKanban, leads: viewLeads, tasks: viewTasks, stats: viewStats, users: viewUsers, redirects: viewRedirects, config: viewSettings, leadDetail: () => viewLeadDetail(state.detailId) };
   (views[state.view] || viewKanban)();
 }
 
@@ -497,6 +500,10 @@ async function viewLeadDetail(id) {
             ${lead.phone ? `<a class="btn btn-ghost btn-sm" href="https://wa.me/${esc(wa)}" target="_blank" rel="noopener" style="justify-content:center">WhatsApp</a>` : ''}
           </div>
         </div>
+        <div class="card-box">
+          <div class="section-t section-t-row">Tareas / recordatorios<button class="btn btn-ghost btn-sm" id="ld-task-add">+ Añadir</button></div>
+          <div id="ld-tasks" class="task-list mini">${(lead.tasks || []).length ? lead.tasks.map((t) => taskRowHTML(t, { showLead: false })).join('') : '<p style="color:var(--mute);font-size:.8rem">Sin tareas. Programa un recordatorio (ej. llamar en 1 h) y te avisamos por correo.</p>'}</div>
+        </div>
       </aside>
     </div>`;
 
@@ -528,6 +535,10 @@ async function viewLeadDetail(id) {
   };
   $('#note-btn').addEventListener('click', addNote);
   $('#note').addEventListener('keydown', (e) => { if (e.key === 'Enter') addNote(); });
+
+  // Tareas del lead (crear "llamar a…" + marcar/eliminar)
+  $('#ld-task-add')?.addEventListener('click', () => openTaskModal({ lead_id: id, lead_name: fullName(lead), title: 'Llamar a ' + fullName(lead), onSaved: () => viewLeadDetail(id) }));
+  const ldTasks = $('#ld-tasks'); if (ldTasks) wireTaskList(ldTasks, () => viewLeadDetail(id));
 
   // Pestañas Perfil / Origen
   $('#ld-tabs').addEventListener('click', (e) => {
@@ -624,6 +635,139 @@ function openNewLead() {
     if (!body.first_name && !body.email) { toast('Falta nombre o correo', 'err'); return; }
     try { await api('POST', '/api/leads', body); closeModal(); await loadLeads(); if (state.view === 'kanban') paintKanban(); else if (state.view === 'leads') paintLeads(); toast('Lead creado'); }
     catch (e) { toast('Error al crear', 'err'); }
+  });
+}
+
+// ============================================================
+//  TAREAS / RECORDATORIOS
+// ============================================================
+const pad2 = (n) => String(n).padStart(2, '0');
+function toLocalInput(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`; }
+function taskDue(due) {
+  if (!due) return { txt: 'Sin fecha', cls: 'nofecha' };
+  const d = new Date(due), now = new Date();
+  const day0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dd = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diff = Math.round((dd - day0) / 86400000);
+  const hm = d.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+  let txt;
+  if (d < now) txt = 'Vencida · ' + fmtDateTime(due);
+  else if (diff === 0) txt = 'Hoy ' + hm;
+  else if (diff === 1) txt = 'Mañana ' + hm;
+  else txt = fmtDateTime(due);
+  return { txt, cls: d < now ? 'overdue' : diff === 0 ? 'today' : 'upcoming' };
+}
+const leadTaskName = (t) => `${t.lead_first || ''} ${t.lead_last || ''}`.trim();
+function taskRowHTML(t, opts = {}) {
+  const done = t.status === 'hecha';
+  const dm = taskDue(t.due_at);
+  const leadName = leadTaskName(t);
+  return `<div class="task-row ${done ? 'done' : ''}" data-id="${t.id}">
+    <button class="task-check ${done ? 'on' : ''}" data-act="toggle" title="${done ? 'Reabrir' : 'Marcar hecha'}" aria-label="Marcar hecha">${done ? '✓' : ''}</button>
+    <div class="task-body">
+      <div class="task-title">${esc(t.title)}</div>
+      <div class="task-meta">
+        ${done ? `<span class="task-due done">Hecha${t.done_at ? ' · ' + fmtDateTime(t.done_at) : ''}</span>` : `<span class="task-due ${dm.cls}">${esc(dm.txt)}</span>`}
+        ${opts.showLead && t.lead_id ? `<a class="task-lead" data-act="lead" href="#lead-${t.lead_id}">${ICON.leads}${esc(leadName || 'Lead #' + t.lead_id)}</a>` : ''}
+        ${t.owner_name ? `<span class="task-owner">${esc(t.owner_name)}</span>` : ''}
+      </div>
+    </div>
+    <button class="task-del" data-act="del" title="Eliminar" aria-label="Eliminar">✕</button>
+  </div>`;
+}
+async function toggleTask(id, done) { await api('PATCH', `/api/tasks/${id}`, { status: done ? 'hecha' : 'pendiente' }); }
+async function loadTasks() { try { state.tasks = await api('GET', '/api/tasks?scope=pendiente'); } catch (e) { state.tasks = []; } paintTaskBadge(); }
+function overdueCount() { const now = Date.now(); return (state.tasks || []).filter((t) => t.due_at && new Date(t.due_at).getTime() <= now).length; }
+function paintTaskBadge() { const b = $('#badge-tasks'); if (!b) return; b.textContent = (state.tasks || []).length || ''; b.classList.toggle('overdue', overdueCount() > 0); }
+function wireTaskList(container, refresh) {
+  container.onclick = async (e) => {
+    const row = e.target.closest('.task-row'); if (!row) return;
+    const act = e.target.closest('[data-act]')?.dataset.act; if (!act || act === 'lead') return;
+    const id = Number(row.dataset.id);
+    if (act === 'toggle') { try { await toggleTask(id, !row.classList.contains('done')); await loadTasks(); refresh(); } catch (x) { toast('Error', 'err'); } }
+    else if (act === 'del') { if (!confirm('¿Eliminar esta tarea?')) return; try { await api('DELETE', `/api/tasks/${id}`); await loadTasks(); refresh(); toast('Tarea eliminada'); } catch (x) { toast('Error', 'err'); } }
+  };
+}
+async function viewTasks() {
+  const v = $('#view');
+  v.innerHTML = `
+    <div class="topbar">
+      <div><span class="ey">Seguimiento</span><h1>Tareas y recordatorios</h1></div>
+      <div class="tools"><button class="btn btn-primary btn-sm" id="new-task">+ Nueva tarea</button></div>
+    </div>
+    <div class="filters" id="task-filters">
+      <button class="fbtn active" data-f="pendiente">Pendientes</button>
+      <button class="fbtn" data-f="hecha">Hechas</button>
+      <button class="fbtn" data-f="all">Todas</button>
+    </div>
+    <div id="task-list" class="task-list"><div class="empty">Cargando…</div></div>`;
+  $('#new-task').addEventListener('click', () => openTaskModal({ onSaved: () => paintTasks(curTaskScope) }));
+  const filters = $('#task-filters');
+  filters.addEventListener('click', (e) => { const b = e.target.closest('.fbtn'); if (!b) return; filters.querySelectorAll('.fbtn').forEach((x) => x.classList.toggle('active', x === b)); paintTasks(b.dataset.f); });
+  paintTasks('pendiente');
+}
+let curTaskScope = 'pendiente';
+async function paintTasks(scope) {
+  curTaskScope = scope;
+  const list = $('#task-list'); if (!list) return;
+  let rows;
+  try { rows = await api('GET', '/api/tasks' + (scope && scope !== 'all' ? '?scope=' + scope : '')); }
+  catch (e) { list.innerHTML = '<div class="empty">Error al cargar</div>'; return; }
+  if (!rows.length) { list.innerHTML = `<div class="empty"><div class="big">Sin tareas ${scope === 'hecha' ? 'hechas' : 'pendientes'}</div>Crea un recordatorio (ej. “llamar al lead”) para no perder ningún seguimiento.</div>`; return; }
+  if (scope === 'pendiente') {
+    const now = Date.now();
+    const dayEnd = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59).getTime(); })();
+    const g = { Vencidas: [], Hoy: [], 'Próximas': [], 'Sin fecha': [] };
+    for (const t of rows) { if (!t.due_at) g['Sin fecha'].push(t); else { const ts = new Date(t.due_at).getTime(); if (ts < now) g.Vencidas.push(t); else if (ts <= dayEnd) g.Hoy.push(t); else g['Próximas'].push(t); } }
+    list.innerHTML = Object.entries(g).filter(([, a]) => a.length).map(([name, a]) =>
+      `<div class="task-group"><div class="task-group-h ${name === 'Vencidas' ? 'od' : ''}">${name}<span>${a.length}</span></div>${a.map((t) => taskRowHTML(t, { showLead: true })).join('')}</div>`).join('');
+  } else {
+    list.innerHTML = rows.map((t) => taskRowHTML(t, { showLead: true })).join('');
+  }
+  wireTaskList(list, () => paintTasks(scope));
+}
+function openTaskModal(prefill = {}) {
+  const leadOpts = ['<option value="">— Sin lead —</option>', ...state.leads.map((l) => `<option value="${l.id}" ${l.id === prefill.lead_id ? 'selected' : ''}>${esc(fullName(l))}</option>`)].join('');
+  const ownerOpts = state.users.map((u) => `<option value="${u.id}" ${u.id === state.me.id ? 'selected' : ''}>${esc(u.name)}</option>`).join('');
+  modal(`
+    <h2>Nueva tarea</h2>
+    <p class="desc">Un recordatorio de seguimiento. Se te avisará por correo cuando esté por vencer.</p>
+    <div class="field"><label>Tarea</label><input id="t-title" placeholder="Ej. Llamar al lead" value="${esc(prefill.title || '')}"></div>
+    <div class="field"><label>Lead relacionado</label><select id="t-lead">${leadOpts}</select></div>
+    <div class="field"><label>Vence</label><input id="t-due" type="datetime-local"></div>
+    <div class="task-presets" id="t-presets">
+      <button class="chip-btn" data-min="60">En 1 h</button>
+      <button class="chip-btn" data-min="180">En 3 h</button>
+      <button class="chip-btn" data-tom="9">Mañana 9:00</button>
+      <button class="chip-btn" data-days="3">En 3 días</button>
+    </div>
+    <div class="field"><label>Responsable</label><select id="t-owner">${ownerOpts}</select></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost btn-sm" id="t-cancel">Cancelar</button>
+      <button class="btn btn-primary btn-sm" id="t-ok">Crear tarea</button>
+    </div>`);
+  $('#t-presets').addEventListener('click', (e) => {
+    const b = e.target.closest('.chip-btn'); if (!b) return; e.preventDefault();
+    const d = new Date();
+    if (b.dataset.min) d.setMinutes(d.getMinutes() + Number(b.dataset.min));
+    else if (b.dataset.tom) { d.setDate(d.getDate() + 1); d.setHours(Number(b.dataset.tom), 0, 0, 0); }
+    else if (b.dataset.days) { d.setDate(d.getDate() + Number(b.dataset.days)); d.setHours(9, 0, 0, 0); }
+    $('#t-due').value = toLocalInput(d);
+    $('#t-presets').querySelectorAll('.chip-btn').forEach((x) => x.classList.toggle('on', x === b));
+  });
+  $('#t-cancel').addEventListener('click', closeModal);
+  $('#t-ok').addEventListener('click', async () => {
+    const title = $('#t-title').value.trim();
+    if (!title) { toast('Escribe la tarea', 'err'); return; }
+    const dueVal = $('#t-due').value;
+    const body = {
+      title,
+      lead_id: $('#t-lead').value ? Number($('#t-lead').value) : null,
+      owner_id: Number($('#t-owner').value) || null,
+      due_at: dueVal ? new Date(dueVal).toISOString() : null,
+    };
+    try { await api('POST', '/api/tasks', body); closeModal(); await loadTasks(); toast('Tarea creada'); prefill.onSaved && prefill.onSaved(); }
+    catch (e) { toast('Error al crear la tarea', 'err'); }
   });
 }
 
@@ -1084,6 +1228,7 @@ async function loadLeads() { state.leads = await api('GET', '/api/leads'); const
     state.meta = await api('GET', '/api/meta');
     state.users = await api('GET', '/api/users');
     await loadLeads();
+    await loadTasks();
     window.addEventListener('hashchange', syncHash);
     syncHash(); // fija la vista desde el hash (o kanban por defecto) y renderiza
   } catch (e) {
@@ -1097,7 +1242,7 @@ function syncHash() {
   const h = location.hash.replace(/^#/, '');
   const m = h.match(/^lead-(\d+)$/);
   if (m) { state.detailId = Number(m[1]); state.view = 'leadDetail'; }
-  else if (['kanban', 'leads', 'stats', 'users', 'redirects', 'config'].includes(h)) { state.view = h; }
+  else if (['kanban', 'leads', 'tasks', 'stats', 'users', 'redirects', 'config'].includes(h)) { state.view = h; }
   else if (state.view === 'leadDetail') { state.view = 'leads'; }
   renderApp();
 }

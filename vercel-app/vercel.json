@@ -37,5 +37,8 @@
         { "key": "Cache-Control", "value": "public, max-age=86400" }
       ]
     }
+  ],
+  "crons": [
+    { "path": "/api/cron/task-reminders", "schedule": "0 21 * * *" }
   ]
 }
