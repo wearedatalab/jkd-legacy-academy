@@ -714,16 +714,8 @@ async function paintTasks(scope) {
   try { rows = await api('GET', '/api/tasks' + (scope && scope !== 'all' ? '?scope=' + scope : '')); }
   catch (e) { list.innerHTML = '<div class="empty">Error al cargar</div>'; return; }
   if (!rows.length) { list.innerHTML = `<div class="empty"><div class="big">Sin tareas ${scope === 'hecha' ? 'hechas' : 'pendientes'}</div>Crea un recordatorio (ej. “llamar al lead”) para no perder ningún seguimiento.</div>`; return; }
-  if (scope === 'pendiente') {
-    const now = Date.now();
-    const dayEnd = (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59).getTime(); })();
-    const g = { Vencidas: [], Hoy: [], 'Próximas': [], 'Sin fecha': [] };
-    for (const t of rows) { if (!t.due_at) g['Sin fecha'].push(t); else { const ts = new Date(t.due_at).getTime(); if (ts < now) g.Vencidas.push(t); else if (ts <= dayEnd) g.Hoy.push(t); else g['Próximas'].push(t); } }
-    list.innerHTML = Object.entries(g).filter(([, a]) => a.length).map(([name, a]) =>
-      `<div class="task-group"><div class="task-group-h ${name === 'Vencidas' ? 'od' : ''}">${name}<span>${a.length}</span></div>${a.map((t) => taskRowHTML(t, { showLead: true })).join('')}</div>`).join('');
-  } else {
-    list.innerHTML = rows.map((t) => taskRowHTML(t, { showLead: true })).join('');
-  }
+  // Orden: por fecha de vencimiento, de la más reciente a la más vieja (lo entrega ya la API en DESC).
+  list.innerHTML = rows.map((t) => taskRowHTML(t, { showLead: true })).join('');
   wireTaskList(list, () => paintTasks(scope));
 }
 function openTaskModal(prefill = {}) {

@@ -724,7 +724,7 @@ export async function handle(req, res) {
 
       if (!sub && method === 'GET') {
         const events = await db.all(`SELECT e.*, u.name user_name FROM lead_events e LEFT JOIN users u ON u.id=e.user_id WHERE e.lead_id=? ORDER BY datetime(e.created_at) ASC`, [id]);
-        const tasks = await db.all(`SELECT t.*, u.name owner_name FROM tasks t LEFT JOIN users u ON u.id=t.owner_id WHERE t.lead_id=? ORDER BY (t.status='hecha'), (t.due_at IS NULL), datetime(t.due_at) ASC, t.id DESC`, [id]);
+        const tasks = await db.all(`SELECT t.*, u.name owner_name FROM tasks t LEFT JOIN users u ON u.id=t.owner_id WHERE t.lead_id=? ORDER BY (t.status='hecha'), (t.due_at IS NULL), datetime(t.due_at) DESC, t.id DESC`, [id]);
         return json(res, 200, { ...(await leadRow(lead)), events, tasks });
       }
       if (!sub && method === 'PATCH') {
@@ -774,7 +774,7 @@ export async function handle(req, res) {
       const rows = await db.all(
         `SELECT t.*, l.first_name lead_first, l.last_name lead_last, l.status lead_status, u.name owner_name
          FROM tasks t LEFT JOIN leads l ON l.id=t.lead_id LEFT JOIN users u ON u.id=t.owner_id
-         ${where} ORDER BY (t.status='hecha'), (t.due_at IS NULL), datetime(t.due_at) ASC, t.id DESC LIMIT 500`, args);
+         ${where} ORDER BY (t.status='hecha'), (t.due_at IS NULL), datetime(t.due_at) DESC, t.id DESC LIMIT 500`, args);
       return json(res, 200, rows);
     }
     if (p === '/api/tasks' && method === 'POST') {
