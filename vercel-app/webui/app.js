@@ -6,15 +6,15 @@ const root = $('#root');
 const state = { me: null, meta: null, leads: [], users: [], tasks: [], view: 'kanban', filter: 'all', q: '', leadsPage: 1, kLimit: {} };
 
 const STATUS_META = {
-  registrado: { label: 'Registrado', color: 'var(--accent)', cls: 'registrado' },
-  contactado: { label: 'Contactado', color: 'var(--brass)', cls: 'contactado' },
+  registrado: { label: 'Registered', color: 'var(--accent)', cls: 'registrado' },
+  contactado: { label: 'Contacted', color: 'var(--brass)', cls: 'contactado' },
   sesion_free: { label: 'Session Free', color: 'var(--violet)', cls: 'sesion_free' },
-  ganado:     { label: 'Ganado',     color: 'var(--green)', cls: 'ganado' },
-  perdido:    { label: 'Perdido',    color: 'var(--red)',   cls: 'perdido' },
+  ganado:     { label: 'Won',        color: 'var(--green)', cls: 'ganado' },
+  perdido:    { label: 'Lost',       color: 'var(--red)',   cls: 'perdido' },
 };
 
 // Roles: administrador (acceso total) y comercial (restringido)
-const ROLE_LABELS = { admin: 'Administrador', comercial: 'Comercial' };
+const ROLE_LABELS = { admin: 'Administrator', comercial: 'Sales' };
 const roleLabel = (r) => ROLE_LABELS[r] || r;
 const isAdmin = () => !!(state.me && state.me.role === 'admin');
 
@@ -34,11 +34,11 @@ const ICON = {
 // ---------- utils ----------
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const initials = (n) => (n || '?').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
-const fullName = (l) => `${l.first_name || ''} ${l.last_name || ''}`.trim() || '(sin nombre)';
-function fmtDate(iso) { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleDateString('es', { day: '2-digit', month: 'short', year: 'numeric' }); }
-function fmtDateTime(iso) { const d = new Date(iso); return d.toLocaleString('es', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); }
-function fmtMonth(m) { const [y, mo] = m.split('-'); return new Date(y, mo - 1, 1).toLocaleDateString('es', { month: 'short' }).replace('.', ''); }
-function fmtMonthLong(m) { const [y, mo] = m.split('-'); const d = new Date(y, mo - 1, 1).toLocaleDateString('es', { month: 'long', year: 'numeric' }); return d.charAt(0).toUpperCase() + d.slice(1); }
+const fullName = (l) => `${l.first_name || ''} ${l.last_name || ''}`.trim() || '(no name)';
+function fmtDate(iso) { if (!iso) return '—'; const d = new Date(iso); return d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' }); }
+function fmtDateTime(iso) { const d = new Date(iso); return d.toLocaleString('en-AU', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); }
+function fmtMonth(m) { const [y, mo] = m.split('-'); return new Date(y, mo - 1, 1).toLocaleDateString('en-AU', { month: 'short' }).replace('.', ''); }
+function fmtMonthLong(m) { const [y, mo] = m.split('-'); const d = new Date(y, mo - 1, 1).toLocaleDateString('en-AU', { month: 'long', year: 'numeric' }); return d.charAt(0).toUpperCase() + d.slice(1); }
 
 const API_BASE = '/crm'; // the CRM is mounted under /crm on the main domain
 async function api(method, path, body) {
@@ -67,17 +67,17 @@ function renderLogin() {
         <span class="mark"><img src="assets/favicon.png" alt=""></span>
         <span><b>JKD Legacy</b><span>Backoffice · CRM</span></span>
       </div>
-      <h1>Acceso al panel</h1>
-      <p class="sub">Ingresa tu correo y te enviaremos un enlace mágico para entrar — sin contraseñas.</p>
+      <h1>Panel access</h1>
+      <p class="sub">Enter your email and we'll send you a magic link to sign in — no passwords.</p>
       <form id="login-form">
         <div class="field">
-          <label>Correo electrónico</label>
+          <label>Email</label>
           <input type="email" id="email" placeholder="tu@jkdlegacy.com.au" required autocomplete="email">
         </div>
-        <button class="btn btn-primary" style="width:100%;justify-content:center" type="submit">Enviar enlace mágico →</button>
+        <button class="btn btn-primary" style="width:100%;justify-content:center" type="submit">Send magic link →</button>
       </form>
       <div id="magic-out"></div>
-      ${(location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? '<p class="login-note">Demo local · usa <code>admin@jkdlegacy.com.au</code> (administrador) o <code>comercial@jkdlegacy.com.au</code> (comercial).</p>' : ''}
+      ${(location.hostname === 'localhost' || location.hostname === '127.0.0.1') ? '<p class="login-note">Local demo · use <code>admin@jkdlegacy.com.au</code> (administrator) or <code>comercial@jkdlegacy.com.au</code> (sales).</p>' : ''}
     </div>
   </div>`;
 
@@ -85,16 +85,16 @@ function renderLogin() {
     e.preventDefault();
     const btn = e.target.querySelector('button');
     const email = $('#email').value.trim();
-    btn.disabled = true; btn.textContent = 'Generando…';
+    btn.disabled = true; btn.textContent = 'Generating…';
     try {
       const r = await api('POST', '/api/auth/request', { email });
       const out = $('#magic-out');
       // Mensaje neutro siempre — no revela si el correo existe ni a quién pertenece.
-      let h = '<div class="magic-result"><p>Si el correo está registrado, te enviamos un enlace de acceso. Revisa tu bandeja de entrada.</p>';
-      if (r.devLink) h += `<span class="devtag" style="display:block;margin-top:12px">● Modo demo local (sin correo)</span><a class="btn btn-primary btn-sm" href="${r.devLink}" style="margin-top:8px">Entrar al panel →</a>`;
+      let h = '<div class="magic-result"><p>If the email is registered, we have sent you a sign-in link. Check your inbox.</p>';
+      if (r.devLink) h += `<span class="devtag" style="display:block;margin-top:12px">● Local demo mode (no email)</span><a class="btn btn-primary btn-sm" href="${r.devLink}" style="margin-top:8px">Enter panel →</a>`;
       out.innerHTML = h + '</div>';
-    } catch (err) { toast('Error al solicitar el enlace', 'err'); }
-    btn.disabled = false; btn.textContent = 'Enviar enlace mágico →';
+    } catch (err) { toast('Error requesting the link', 'err'); }
+    btn.disabled = false; btn.textContent = 'Send magic link →';
   });
 }
 
@@ -107,11 +107,11 @@ function renderApp() {
   const navItems = [
     ['kanban', 'Pipeline', ICON.kanban],
     ['leads', 'Leads', ICON.leads],
-    ['tasks', 'Tareas', ICON.tasks],
-    ['stats', 'Estadísticas', ICON.stats],
-    ['users', 'Usuarios', ICON.users],
-    ['redirects', 'Redirecciones', ICON.redirect],
-    ['config', 'Configuración', ICON.config],
+    ['tasks', 'Tasks', ICON.tasks],
+    ['stats', 'Statistics', ICON.stats],
+    ['users', 'Users', ICON.users],
+    ['redirects', 'Redirects', ICON.redirect],
+    ['config', 'Settings', ICON.config],
   ].filter(([k]) => isAdmin() || !ADMIN_VIEWS.includes(k));
   // Bloquea el acceso directo del comercial a vistas restringidas
   if (!isAdmin() && ADMIN_VIEWS.includes(state.view)) state.view = 'kanban';
@@ -133,13 +133,13 @@ function renderApp() {
           <span class="avatar">${initials(state.me.name)}</span>
           <span><span class="nm">${esc(state.me.name)}</span><span class="rl">${roleLabel(state.me.role)}</span></span>
         </div>
-        <button class="nav-item" id="logout">${ICON.out}<span>Cerrar sesión</span></button>
+        <button class="nav-item" id="logout">${ICON.out}<span>Log out</span></button>
       </div>
     </aside>
     <main class="main">
       ${state.me.impersonating ? `<div class="imp-bar">
-        <span class="imp-msg">${ICON.eye} Estás viendo el CRM como <b>${esc(state.me.name)}</b> · ${roleLabel(state.me.role)}</span>
-        <button class="btn btn-sm imp-back" id="stop-imp">Volver a ${esc(state.me.impersonating.name)} →</button>
+        <span class="imp-msg">${ICON.eye} You're viewing the CRM as <b>${esc(state.me.name)}</b> · ${roleLabel(state.me.role)}</span>
+        <button class="btn btn-sm imp-back" id="stop-imp">Back to ${esc(state.me.impersonating.name)} →</button>
       </div>` : ''}
       <div id="view"></div>
     </main>
@@ -155,7 +155,7 @@ function renderApp() {
   $('#logout').addEventListener('click', async () => { await api('POST', '/api/auth/logout'); location.reload(); });
   $('#stop-imp')?.addEventListener('click', async () => {
     try { await api('POST', '/api/auth/stop-impersonate'); location.reload(); }
-    catch (e) { toast('No se pudo volver a tu cuenta', 'err'); }
+    catch (e) { toast('Could not return to your account', 'err'); }
   });
 
   $('#badge-leads').textContent = state.leads.length || '';
@@ -171,10 +171,10 @@ async function viewKanban() {
   const v = $('#view');
   v.innerHTML = `
     <div class="topbar">
-      <div><span class="ey">Pipeline de conversión</span><h1>Del registro a la matrícula</h1></div>
+      <div><span class="ey">Conversion pipeline</span><h1>From sign-up to enrollment</h1></div>
       <div class="tools">
-        <div class="search">${ICON.search}<input id="k-search" placeholder="Buscar lead…" value="${esc(state.q)}"></div>
-        <button class="btn btn-ghost btn-sm" id="new-lead">+ Lead manual</button>
+        <div class="search">${ICON.search}<input id="k-search" placeholder="Search lead…" value="${esc(state.q)}"></div>
+        <button class="btn btn-ghost btn-sm" id="new-lead">+ Manual lead</button>
       </div>
     </div>
     <div class="kanban" id="kanban"></div>`;
@@ -215,7 +215,7 @@ function colBodyHTML(st, items) {
   const shown = items.slice(0, limit);
   const rest = items.length - shown.length;
   const more = rest > 0
-    ? `<button class="col-more" data-status="${st}">↓ Ver ${Math.min(KANBAN_BLOCK, rest)} más · ${rest} restante${rest === 1 ? '' : 's'}</button>`
+    ? `<button class="col-more" data-status="${st}">↓ Show ${Math.min(KANBAN_BLOCK, rest)} more · ${rest} left</button>`
     : '';
   return shown.map(cardHTML).join('') + more;
 }
@@ -248,7 +248,7 @@ function cardHTML(l) {
     <div class="nm">${esc(fullName(l))}</div>
     <div class="meta"><span>${esc(l.location || '—')}</span><span>·</span><span>${fmtDate(l.created_at)}</span></div>
     <div class="foot">
-      <span class="own">${l.owner_name ? `<span class="av">${initials(l.owner_name)}</span>${esc(l.owner_name.split(' ')[0])}` : '<span style="color:var(--mute)">Sin asignar</span>'}</span>
+      <span class="own">${l.owner_name ? `<span class="av">${initials(l.owner_name)}</span>${esc(l.owner_name.split(' ')[0])}` : '<span style="color:var(--mute)">Unassigned</span>'}</span>
       ${loss || `<span class="src">${esc((l.source || '').toUpperCase())}</span>`}
     </div>
   </div>`;
@@ -285,7 +285,7 @@ async function changeStatus(id, status, loss_reason) {
     else if (state.view === 'leads') paintLeads();
     else if (state.view === 'leadDetail') viewLeadDetail(id);
     toast(`Lead → ${STATUS_META[status].label}`);
-  } catch (e) { toast('No se pudo actualizar', 'err'); }
+  } catch (e) { toast('Could not update', 'err'); }
 }
 
 // ============================================================
@@ -295,14 +295,14 @@ async function viewLeads() {
   const v = $('#view');
   v.innerHTML = `
     <div class="topbar">
-      <div><span class="ey">Base de datos</span><h1>Leads registrados</h1></div>
+      <div><span class="ey">Database</span><h1>Registered leads</h1></div>
       <div class="tools">
-        <div class="search">${ICON.search}<input id="l-search" placeholder="Buscar nombre, correo…" value="${esc(state.q)}"></div>
-        <button class="btn btn-ghost btn-sm" id="new-lead">+ Lead manual</button>
+        <div class="search">${ICON.search}<input id="l-search" placeholder="Search name, email…" value="${esc(state.q)}"></div>
+        <button class="btn btn-ghost btn-sm" id="new-lead">+ Manual lead</button>
       </div>
     </div>
     <div class="filters" id="filters">
-      ${['all', ...Object.keys(STATUS_META)].map((f) => `<button class="fbtn ${state.filter === f ? 'active' : ''}" data-f="${f}">${f === 'all' ? 'Todos' : STATUS_META[f].label}</button>`).join('')}
+      ${['all', ...Object.keys(STATUS_META)].map((f) => `<button class="fbtn ${state.filter === f ? 'active' : ''}" data-f="${f}">${f === 'all' ? 'All' : STATUS_META[f].label}</button>`).join('')}
     </div>
     <div class="panel"><div id="leads-table"></div></div>`;
 
@@ -320,7 +320,7 @@ function paintLeads() {
   const q = state.q.toLowerCase();
   let rows = state.leads.filter((l) => state.filter === 'all' || l.status === state.filter);
   if (q) rows = rows.filter((l) => `${fullName(l)} ${l.email} ${l.phone}`.toLowerCase().includes(q));
-  if (!rows.length) { wrap.innerHTML = `<div class="empty"><div class="big">Sin leads</div>No hay registros con este filtro.</div>`; return; }
+  if (!rows.length) { wrap.innerHTML = `<div class="empty"><div class="big">No leads</div>No records match this filter.</div>`; return; }
 
   const total = rows.length;
   const pages = Math.max(1, Math.ceil(total / LEADS_PER_PAGE));
@@ -329,7 +329,7 @@ function paintLeads() {
   const pageRows = rows.slice(start, start + LEADS_PER_PAGE);
 
   wrap.innerHTML = `<table><thead><tr>
-    <th>Nombre</th><th>Contacto</th><th>Sede</th><th>Estado</th><th>Responsable</th><th>Registro</th>
+    <th>Name</th><th>Contact</th><th>Location</th><th>Status</th><th>Owner</th><th>Created</th>
     </tr></thead><tbody>
     ${pageRows.map((l) => `<tr data-id="${l.id}">
       <td><span class="lead-nm">${esc(fullName(l))}</span></td>
@@ -367,7 +367,7 @@ function pageWindow(cur, pages) {
 
 function leadsPager(page, pages, total, start, count) {
   const from = total ? start + 1 : 0, to = start + count;
-  const caption = `<span class="pager-count">Mostrando <b>${from}–${to}</b> de <b>${total}</b></span>`;
+  const caption = `<span class="pager-count">Showing <b>${from}–${to}</b> of <b>${total}</b></span>`;
   if (pages <= 1) return `<div class="pager">${caption}</div>`;
   const nums = pageWindow(page, pages).map((n) => n === '…'
     ? `<span class="pager-gap">…</span>`
@@ -396,11 +396,11 @@ function backToLeads() {
 
 async function viewLeadDetail(id) {
   const v = $('#view');
-  v.innerHTML = `<div class="empty">Cargando…</div>`;
+  v.innerHTML = `<div class="empty">Loading…</div>`;
   let lead;
   try { lead = await api('GET', `/api/leads/${id}`); }
   catch (e) {
-    v.innerHTML = `<div class="empty"><div class="big">Lead no encontrado</div><button class="btn btn-ghost btn-sm" id="back" style="margin-top:14px">← Volver a Leads</button></div>`;
+    v.innerHTML = `<div class="empty"><div class="big">Lead no encontrado</div><button class="btn btn-ghost btn-sm" id="back" style="margin-top:14px">← Back to Leads</button></div>`;
     $('#back')?.addEventListener('click', backToLeads); return;
   }
   const ownerOpts = ['<option value="">Sin asignar</option>', ...state.users.map((u) => `<option value="${u.id}" ${u.id === lead.owner_id ? 'selected' : ''}>${esc(u.name)}</option>`)].join('');
@@ -413,72 +413,72 @@ async function viewLeadDetail(id) {
   v.innerHTML = `
     <div class="topbar">
       <div>
-        <button class="backlink" id="back">← Volver a Leads</button>
+        <button class="backlink" id="back">← Back to Leads</button>
         <h1 style="margin-top:6px">${esc(fullName(lead))}</h1>
         <div class="detail-sub">
           <span class="status-pill st-${lead.status}"><span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span>${STATUS_META[lead.status].label}</span>
           <span>·</span><span>${esc((lead.source || '').toUpperCase())}</span>
-          <span>·</span><span>Registro ${fmtDate(lead.created_at)}</span>
+          <span>·</span><span>Registered ${fmtDate(lead.created_at)}</span>
         </div>
       </div>
-      <div class="tools">${isAdmin() ? '<button class="btn btn-ghost btn-sm" id="del">Eliminar</button>' : ''}</div>
+      <div class="tools">${isAdmin() ? '<button class="btn btn-ghost btn-sm" id="del">Delete</button>' : ''}</div>
     </div>
 
     <div class="ld-tabs" id="ld-tabs">
-      <button data-t="perfil" class="active">Perfil</button>
-      <button data-t="origen">Origen</button>
+      <button data-t="perfil" class="active">Profile</button>
+      <button data-t="origen">Source</button>
     </div>
 
     <div class="detail-grid">
       <div class="detail-main">
         <div id="tab-perfil">
         <div class="card-box">
-          <div class="section-t">Información de contacto</div>
+          <div class="section-t">Contact information</div>
           <div class="kv">
-            <div class="kv-row"><span class="k">Correo</span>${lead.email ? `<a class="v" href="mailto:${esc(lead.email)}">${esc(lead.email)}</a>` : '<span class="v">—</span>'}</div>
-            <div class="kv-row"><span class="k">Teléfono</span>${lead.phone ? `<a class="v" href="tel:${esc(tel)}">${esc(lead.phone)}</a>` : '<span class="v">—</span>'}</div>
-            <div class="kv-row"><span class="k">Sede preferida</span><span class="v">${esc(lead.location || '—')}</span></div>
-            <div class="kv-row"><span class="k">Experiencia</span><span class="v">${esc(lead.experience || '—')}</span></div>
-            <div class="kv-row"><span class="k">Origen</span><span class="v">${esc(lead.source || '—')}</span></div>
-            <div class="kv-row"><span class="k">Responsable</span><span class="v">${lead.owner_name ? esc(lead.owner_name) : 'Sin asignar'}</span></div>
-            <div class="kv-row"><span class="k">Último cambio</span><span class="v">${fmtDateTime(lead.updated_at)}</span></div>
+            <div class="kv-row"><span class="k">Email</span>${lead.email ? `<a class="v" href="mailto:${esc(lead.email)}">${esc(lead.email)}</a>` : '<span class="v">—</span>'}</div>
+            <div class="kv-row"><span class="k">Phone</span>${lead.phone ? `<a class="v" href="tel:${esc(tel)}">${esc(lead.phone)}</a>` : '<span class="v">—</span>'}</div>
+            <div class="kv-row"><span class="k">Preferred location</span><span class="v">${esc(lead.location || '—')}</span></div>
+            <div class="kv-row"><span class="k">Experience</span><span class="v">${esc(lead.experience || '—')}</span></div>
+            <div class="kv-row"><span class="k">Source</span><span class="v">${esc(lead.source || '—')}</span></div>
+            <div class="kv-row"><span class="k">Owner</span><span class="v">${lead.owner_name ? esc(lead.owner_name) : 'Unassigned'}</span></div>
+            <div class="kv-row"><span class="k">Last change</span><span class="v">${fmtDateTime(lead.updated_at)}</span></div>
             <div class="kv-row"><span class="k">ID</span><span class="v">#${lead.id}</span></div>
           </div>
-          ${lead.message ? `<div style="margin-top:18px"><div class="section-t">Mensaje / motivación</div><p style="font-size:.92rem;color:var(--dim);line-height:1.65">${esc(lead.message)}</p></div>` : ''}
+          ${lead.message ? `<div style="margin-top:18px"><div class="section-t">Message / motivation</div><p style="font-size:.92rem;color:var(--dim);line-height:1.65">${esc(lead.message)}</p></div>` : ''}
         </div>
 
         <div class="card-box">
-          <div class="section-t">Editar datos</div>
+          <div class="section-t">Edit details</div>
           <div class="form-row">
-            <div class="field"><label>Nombre</label><input id="f-first" value="${esc(lead.first_name || '')}"></div>
-            <div class="field"><label>Apellido</label><input id="f-last" value="${esc(lead.last_name || '')}"></div>
+            <div class="field"><label>Name</label><input id="f-first" value="${esc(lead.first_name || '')}"></div>
+            <div class="field"><label>Last name</label><input id="f-last" value="${esc(lead.last_name || '')}"></div>
           </div>
           <div class="form-row">
-            <div class="field"><label>Correo</label><input id="f-email" value="${esc(lead.email || '')}"></div>
-            <div class="field"><label>Teléfono</label><input id="f-phone" value="${esc(lead.phone || '')}"></div>
+            <div class="field"><label>Email</label><input id="f-email" value="${esc(lead.email || '')}"></div>
+            <div class="field"><label>Phone</label><input id="f-phone" value="${esc(lead.phone || '')}"></div>
           </div>
           <div class="form-row">
-            <div class="field"><label>Sede preferida</label><input id="f-loc" value="${esc(lead.location || '')}"></div>
-            <div class="field"><label>Responsable</label><select id="f-owner">${ownerOpts}</select></div>
+            <div class="field"><label>Preferred location</label><input id="f-loc" value="${esc(lead.location || '')}"></div>
+            <div class="field"><label>Owner</label><select id="f-owner">${ownerOpts}</select></div>
           </div>
-          <div class="field"><label>Experiencia</label><input id="f-exp" value="${esc(lead.experience || '')}"></div>
-          <div class="field"><label>Mensaje / motivación</label><textarea id="f-msg">${esc(lead.message || '')}</textarea></div>
-          <button class="btn btn-primary btn-sm" id="save">Guardar cambios</button>
+          <div class="field"><label>Experience</label><input id="f-exp" value="${esc(lead.experience || '')}"></div>
+          <div class="field"><label>Message / motivation</label><textarea id="f-msg">${esc(lead.message || '')}</textarea></div>
+          <button class="btn btn-primary btn-sm" id="save">Save changes</button>
         </div>
 
         <div class="card-box">
-          <div class="section-t">Actividad</div>
-          <div class="timeline">${(lead.events || []).slice().reverse().map(eventHTML).join('') || '<p style="color:var(--mute);font-size:.8rem">Sin eventos.</p>'}</div>
+          <div class="section-t">Activity</div>
+          <div class="timeline">${(lead.events || []).slice().reverse().map(eventHTML).join('') || '<p style="color:var(--mute);font-size:.8rem">No events.</p>'}</div>
           <div class="note-add">
-            <input id="note" placeholder="Añadir nota…">
-            <button class="btn btn-ghost btn-sm" id="note-btn">Añadir</button>
+            <input id="note" placeholder="Add note…">
+            <button class="btn btn-ghost btn-sm" id="note-btn">Add</button>
           </div>
         </div>
         </div><!-- /tab-perfil -->
 
         <div id="tab-origen" hidden>
           <div class="card-box">
-            <div class="section-t">Origen del lead — atribución (equipo de pauta)</div>
+            <div class="section-t">Lead source — attribution (ads team)</div>
             ${attrHTML(lead)}
           </div>
         </div>
@@ -486,32 +486,32 @@ async function viewLeadDetail(id) {
 
       <aside class="detail-side">
         <div class="card-box">
-          <div class="section-t">Estado en el pipeline</div>
+          <div class="section-t">Pipeline status</div>
           <div class="status-select" id="status-sel">
             ${Object.keys(STATUS_META).map((s) => `<button class="ss ${s} ${lead.status === s ? 'active' : ''}" data-s="${s}">${STATUS_META[s].label}</button>`).join('')}
           </div>
-          ${lead.status === 'perdido' && lead.loss_reason ? `<p style="margin-top:12px;font-size:.8rem;color:var(--red)">Motivo de pérdida: <b>${esc(state.meta.lossReasons[lead.loss_reason] || lead.loss_reason)}</b></p>` : ''}
+          ${lead.status === 'perdido' && lead.loss_reason ? `<p style="margin-top:12px;font-size:.8rem;color:var(--red)">Loss reason: <b>${esc(state.meta.lossReasons[lead.loss_reason] || lead.loss_reason)}</b></p>` : ''}
         </div>
         <div class="card-box">
-          <div class="section-t">Acciones rápidas</div>
+          <div class="section-t">Quick actions</div>
           <div style="display:flex;flex-direction:column;gap:9px">
-            ${lead.email ? `<a class="btn btn-ghost btn-sm" href="mailto:${esc(lead.email)}" style="justify-content:center">✉ Enviar correo</a>` : ''}
-            ${lead.phone ? `<a class="btn btn-ghost btn-sm" href="tel:${esc(tel)}" style="justify-content:center">☎ Llamar</a>` : ''}
+            ${lead.email ? `<a class="btn btn-ghost btn-sm" href="mailto:${esc(lead.email)}" style="justify-content:center">✉ Send email</a>` : ''}
+            ${lead.phone ? `<a class="btn btn-ghost btn-sm" href="tel:${esc(tel)}" style="justify-content:center">☎ Call</a>` : ''}
             ${lead.phone ? `<a class="btn btn-ghost btn-sm" href="https://wa.me/${esc(wa)}" target="_blank" rel="noopener" style="justify-content:center">WhatsApp</a>` : ''}
           </div>
         </div>
         <div class="card-box">
-          <div class="section-t section-t-row">Tareas / recordatorios<button class="btn btn-ghost btn-sm" id="ld-task-add">+ Añadir</button></div>
-          <div id="ld-tasks" class="task-list mini">${(lead.tasks || []).length ? lead.tasks.map((t) => taskRowHTML(t, { showLead: false })).join('') : '<p style="color:var(--mute);font-size:.8rem">Sin tareas. Programa un recordatorio (ej. llamar en 1 h) y te avisamos por correo.</p>'}</div>
+          <div class="section-t section-t-row">Tasks / reminders<button class="btn btn-ghost btn-sm" id="ld-task-add">+ Add</button></div>
+          <div id="ld-tasks" class="task-list mini">${(lead.tasks || []).length ? lead.tasks.map((t) => taskRowHTML(t, { showLead: false })).join('') : '<p style="color:var(--mute);font-size:.8rem">No tasks. Schedule a reminder (e.g. call in 1 h) and we will email you.</p>'}</div>
         </div>
       </aside>
     </div>`;
 
   $('#back').addEventListener('click', backToLeads);
   $('#del')?.addEventListener('click', async () => {
-    if (!confirm('¿Eliminar este lead permanentemente?')) return;
-    try { await api('DELETE', `/api/leads/${id}`); await loadLeads(); toast('Lead eliminado'); backToLeads(); }
-    catch (e) { toast('No se pudo eliminar', 'err'); }
+    if (!confirm('Delete this lead permanently?')) return;
+    try { await api('DELETE', `/api/leads/${id}`); await loadLeads(); toast('Lead deleted'); backToLeads(); }
+    catch (e) { toast("Couldn't delete", 'err'); }
   });
   $('#status-sel').addEventListener('click', (e) => {
     const b = e.target.closest('.ss'); if (!b) return;
@@ -525,19 +525,19 @@ async function viewLeadDetail(id) {
       phone: $('#f-phone').value, location: $('#f-loc').value, experience: $('#f-exp').value,
       message: $('#f-msg').value, owner_id: $('#f-owner').value ? Number($('#f-owner').value) : null,
     };
-    try { await api('PATCH', `/api/leads/${id}`, body); await loadLeads(); toast('Cambios guardados'); viewLeadDetail(id); }
-    catch (e) { toast('Error al guardar', 'err'); }
+    try { await api('PATCH', `/api/leads/${id}`, body); await loadLeads(); toast('Changes saved'); viewLeadDetail(id); }
+    catch (e) { toast('Error saving', 'err'); }
   });
   const addNote = async () => {
     const note = $('#note').value.trim(); if (!note) return;
-    try { await api('POST', `/api/leads/${id}/note`, { note }); toast('Nota añadida'); viewLeadDetail(id); }
+    try { await api('POST', `/api/leads/${id}/note`, { note }); toast('Note added'); viewLeadDetail(id); }
     catch (e) { toast('Error', 'err'); }
   };
   $('#note-btn').addEventListener('click', addNote);
   $('#note').addEventListener('keydown', (e) => { if (e.key === 'Enter') addNote(); });
 
   // Tareas del lead (crear "llamar a…" + marcar/eliminar)
-  $('#ld-task-add')?.addEventListener('click', () => openTaskModal({ lead_id: id, lead_name: fullName(lead), title: 'Llamar a ' + fullName(lead), onSaved: () => viewLeadDetail(id) }));
+  $('#ld-task-add')?.addEventListener('click', () => openTaskModal({ lead_id: id, lead_name: fullName(lead), title: 'Call ' + fullName(lead), onSaved: () => viewLeadDetail(id) }));
   const ldTasks = $('#ld-tasks'); if (ldTasks) wireTaskList(ldTasks, () => viewLeadDetail(id));
 
   // Pestañas Perfil / Origen
@@ -550,14 +550,14 @@ async function viewLeadDetail(id) {
   $('#attr-copy')?.addEventListener('click', () => {
     let a = {}; try { a = JSON.parse(lead.attribution || '{}'); } catch (e) {}
     const lines = Object.entries(a).filter(([k]) => k !== 'user_agent').map(([k, v]) => `${k}: ${v}`);
-    navigator.clipboard.writeText(`Lead #${lead.id} — ${fullName(lead)}\n` + lines.join('\n')).then(() => toast('Resumen copiado')).catch(() => toast('No se pudo copiar', 'err'));
+    navigator.clipboard.writeText(`Lead #${lead.id} — ${fullName(lead)}\n` + lines.join('\n')).then(() => toast('Summary copied')).catch(() => toast('Could not copy', 'err'));
   });
 }
 
 // Atribución / origen del lead (para el equipo de pauta)
 function attrHTML(lead) {
   let a; try { a = JSON.parse(lead.attribution || 'null'); } catch (e) { a = null; }
-  if (!a) return '<div class="empty" style="padding:28px 10px"><div class="big">Sin datos de origen</div>Lead manual o registrado antes de activar la captura de atribución.</div>';
+  if (!a) return '<div class="empty" style="padding:28px 10px"><div class="big">No source data</div>Manual lead, or created before attribution capture was enabled.</div>';
   // Solo http(s):// se emite como enlace; cualquier otro esquema (p. ej. javascript:) se muestra como texto (anti-XSS)
   const linkv = (u) => {
     if (!u) return '<span class="v">—</span>';
@@ -568,23 +568,23 @@ function attrHTML(lead) {
   };
   const row = (label, val, isLink) => val ? `<div class="kv-row"><span class="k">${label}</span>${isLink ? linkv(val) : `<span class="v" style="word-break:break-word;text-align:right">${esc(val)}</span>`}</div>` : '';
   const rows = [
-    row('Campaña', a.utm_campaign), row('Fuente (source)', a.utm_source), row('Medio (medium)', a.utm_medium),
-    row('Término (term)', a.utm_term), row('Contenido (content)', a.utm_content),
+    row('Campaign', a.utm_campaign), row('Source', a.utm_source), row('Medium', a.utm_medium),
+    row('Term', a.utm_term), row('Content', a.utm_content),
     row('Google Click ID', a.gclid), row('Meta Click ID', a.fbclid), row('Microsoft Click ID', a.msclkid), row('TikTok Click ID', a.ttclid),
-    row('Referente', a.referrer, true), row('URL de origen (landing)', a.landing_url, true), row('URL de envío', a.submit_url, true),
-    row('Dispositivo', a.device), row('Idioma', a.language), row('Primer contacto', a.first_seen ? fmtDateTime(a.first_seen) : ''),
+    row('Referrer', a.referrer, true), row('Landing URL', a.landing_url, true), row('Submit URL', a.submit_url, true),
+    row('Device', a.device), row('Language', a.language), row('First seen', a.first_seen ? fmtDateTime(a.first_seen) : ''),
   ].join('');
   return `
-    <div class="attr-channel"><span class="attr-channel-lab">Canal de adquisición</span><span class="attr-channel-val">${esc(a.channel || '—')}</span></div>
+    <div class="attr-channel"><span class="attr-channel-lab">Acquisition channel</span><span class="attr-channel-val">${esc(a.channel || '—')}</span></div>
     <div class="kv">${rows}</div>
-    ${a.user_agent ? `<div style="margin-top:16px"><div class="section-t">Navegador (user agent)</div><p style="font-size:.76rem;color:var(--mute);word-break:break-word;line-height:1.5">${esc(a.user_agent)}</p></div>` : ''}
-    <button class="btn btn-ghost btn-sm" id="attr-copy" style="margin-top:16px">Copiar resumen</button>`;
+    ${a.user_agent ? `<div style="margin-top:16px"><div class="section-t">Browser (user agent)</div><p style="font-size:.76rem;color:var(--mute);word-break:break-word;line-height:1.5">${esc(a.user_agent)}</p></div>` : ''}
+    <button class="btn btn-ghost btn-sm" id="attr-copy" style="margin-top:16px">Copy summary</button>`;
 }
 
 function eventHTML(ev) {
   let txt = '', cls = ev.type;
-  if (ev.type === 'created') txt = `Lead registrado${ev.note ? ` · ${esc(ev.note)}` : ''}`;
-  else if (ev.type === 'status') { cls = ev.to_status; txt = `Movido a <b style="color:var(--text)">${STATUS_META[ev.to_status]?.label || ev.to_status}</b>${ev.loss_reason ? ` — ${esc(state.meta.lossReasons[ev.loss_reason] || ev.loss_reason)}` : ''}`; }
+  if (ev.type === 'created') txt = `Lead created${ev.note ? ` · ${esc(ev.note)}` : ''}`;
+  else if (ev.type === 'status') { cls = ev.to_status; txt = `Moved to <b style="color:var(--text)">${STATUS_META[ev.to_status]?.label || ev.to_status}</b>${ev.loss_reason ? ` — ${esc(state.meta.lossReasons[ev.loss_reason] || ev.loss_reason)}` : ''}`; }
   else if (ev.type === 'note') txt = `📝 ${esc(ev.note)}`;
   return `<div class="tl ${cls}"><span class="dot"></span><div class="body"><div class="t">${txt}</div><div class="d">${fmtDateTime(ev.created_at)}${ev.user_name ? ' · ' + esc(ev.user_name) : ''}</div></div></div>`;
 }
@@ -598,12 +598,12 @@ function closeModal() { $('#modal')?.classList.remove('open'); }
 function openLossModal(onConfirm) {
   const opts = Object.entries(state.meta.lossReasons).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('');
   const m = modal(`
-    <h2>Marcar como Perdido</h2>
-    <p class="desc">Selecciona el motivo de pérdida para el reporte.</p>
-    <div class="field"><label>Motivo</label><select id="loss-r">${opts}</select></div>
+    <h2>Mark as Lost</h2>
+    <p class="desc">Select the loss reason for the report.</p>
+    <div class="field"><label>Reason</label><select id="loss-r">${opts}</select></div>
     <div class="modal-foot">
-      <button class="btn btn-ghost btn-sm" id="loss-cancel">Cancelar</button>
-      <button class="btn btn-primary btn-sm" id="loss-ok">Confirmar pérdida</button>
+      <button class="btn btn-ghost btn-sm" id="loss-cancel">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="loss-ok">Confirm loss</button>
     </div>`);
   $('#loss-cancel').addEventListener('click', () => { closeModal(); if (state.view === 'kanban') paintKanban(); });
   $('#loss-ok').addEventListener('click', () => { const r = $('#loss-r').value; closeModal(); onConfirm(r); });
@@ -612,29 +612,29 @@ function openLossModal(onConfirm) {
 function openNewLead() {
   const ownerOpts = state.users.map((u) => `<option value="${u.id}" ${u.id === state.me.id ? 'selected' : ''}>${esc(u.name)}</option>`).join('');
   modal(`
-    <h2>Nuevo lead</h2>
-    <p class="desc">Registro manual de un interesado.</p>
+    <h2>New lead</h2>
+    <p class="desc">Manually register a prospect.</p>
     <div class="form-row">
-      <div class="field"><label>Nombre</label><input id="n-first"></div>
-      <div class="field"><label>Apellido</label><input id="n-last"></div>
+      <div class="field"><label>Name</label><input id="n-first"></div>
+      <div class="field"><label>Last name</label><input id="n-last"></div>
     </div>
     <div class="form-row">
-      <div class="field"><label>Correo</label><input id="n-email" type="email"></div>
-      <div class="field"><label>Teléfono</label><input id="n-phone"></div>
+      <div class="field"><label>Email</label><input id="n-email" type="email"></div>
+      <div class="field"><label>Phone</label><input id="n-phone"></div>
     </div>
-    <div class="field"><label>Sede preferida</label><input id="n-loc" placeholder="Melbourne · Adelaide…"></div>
-    <div class="field"><label>Responsable</label><select id="n-owner">${ownerOpts}</select></div>
-    <div class="field"><label>Mensaje</label><textarea id="n-msg"></textarea></div>
+    <div class="field"><label>Preferred location</label><input id="n-loc" placeholder="Melbourne · Adelaide…"></div>
+    <div class="field"><label>Owner</label><select id="n-owner">${ownerOpts}</select></div>
+    <div class="field"><label>Message</label><textarea id="n-msg"></textarea></div>
     <div class="modal-foot">
-      <button class="btn btn-ghost btn-sm" id="n-cancel">Cancelar</button>
-      <button class="btn btn-primary btn-sm" id="n-ok">Crear lead</button>
+      <button class="btn btn-ghost btn-sm" id="n-cancel">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="n-ok">Create lead</button>
     </div>`);
   $('#n-cancel').addEventListener('click', closeModal);
   $('#n-ok').addEventListener('click', async () => {
     const body = { first_name: $('#n-first').value, last_name: $('#n-last').value, email: $('#n-email').value, phone: $('#n-phone').value, location: $('#n-loc').value, message: $('#n-msg').value, owner_id: Number($('#n-owner').value), source: 'manual' };
-    if (!body.first_name && !body.email) { toast('Falta nombre o correo', 'err'); return; }
-    try { await api('POST', '/api/leads', body); closeModal(); await loadLeads(); if (state.view === 'kanban') paintKanban(); else if (state.view === 'leads') paintLeads(); toast('Lead creado'); }
-    catch (e) { toast('Error al crear', 'err'); }
+    if (!body.first_name && !body.email) { toast('Name or email required', 'err'); return; }
+    try { await api('POST', '/api/leads', body); closeModal(); await loadLeads(); if (state.view === 'kanban') paintKanban(); else if (state.view === 'leads') paintLeads(); toast('Lead created'); }
+    catch (e) { toast('Error creating', 'err'); }
   });
 }
 
@@ -644,16 +644,16 @@ function openNewLead() {
 const pad2 = (n) => String(n).padStart(2, '0');
 function toLocalInput(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`; }
 function taskDue(due) {
-  if (!due) return { txt: 'Sin fecha', cls: 'nofecha' };
+  if (!due) return { txt: 'No date', cls: 'nofecha' };
   const d = new Date(due), now = new Date();
   const day0 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const dd = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const diff = Math.round((dd - day0) / 86400000);
-  const hm = d.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+  const hm = d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
   let txt;
-  if (d < now) txt = 'Vencida · ' + fmtDateTime(due);
-  else if (diff === 0) txt = 'Hoy ' + hm;
-  else if (diff === 1) txt = 'Mañana ' + hm;
+  if (d < now) txt = 'Overdue · ' + fmtDateTime(due);
+  else if (diff === 0) txt = 'Today ' + hm;
+  else if (diff === 1) txt = 'Tomorrow ' + hm;
   else txt = fmtDateTime(due);
   return { txt, cls: d < now ? 'overdue' : diff === 0 ? 'today' : 'upcoming' };
 }
@@ -663,16 +663,16 @@ function taskRowHTML(t, opts = {}) {
   const dm = taskDue(t.due_at);
   const leadName = leadTaskName(t);
   return `<div class="task-row ${done ? 'done' : ''}" data-id="${t.id}">
-    <button class="task-check ${done ? 'on' : ''}" data-act="toggle" title="${done ? 'Reabrir' : 'Marcar hecha'}" aria-label="Marcar hecha">${done ? '✓' : ''}</button>
+    <button class="task-check ${done ? 'on' : ''}" data-act="toggle" title="${done ? 'Reopen' : 'Mark done'}" aria-label="Mark done">${done ? '✓' : ''}</button>
     <div class="task-body">
       <div class="task-title">${esc(t.title)}</div>
       <div class="task-meta">
-        ${done ? `<span class="task-due done">Hecha${t.done_at ? ' · ' + fmtDateTime(t.done_at) : ''}</span>` : `<span class="task-due ${dm.cls}">${esc(dm.txt)}</span>`}
+        ${done ? `<span class="task-due done">Done${t.done_at ? ' · ' + fmtDateTime(t.done_at) : ''}</span>` : `<span class="task-due ${dm.cls}">${esc(dm.txt)}</span>`}
         ${opts.showLead && t.lead_id ? `<a class="task-lead" data-act="lead" href="#lead-${t.lead_id}">${ICON.leads}${esc(leadName || 'Lead #' + t.lead_id)}</a>` : ''}
         ${t.owner_name ? `<span class="task-owner">${esc(t.owner_name)}</span>` : ''}
       </div>
     </div>
-    <button class="task-del" data-act="del" title="Eliminar" aria-label="Eliminar">✕</button>
+    <button class="task-del" data-act="del" title="Delete" aria-label="Delete">✕</button>
   </div>`;
 }
 async function toggleTask(id, done) { await api('PATCH', `/api/tasks/${id}`, { status: done ? 'hecha' : 'pendiente' }); }
@@ -685,22 +685,22 @@ function wireTaskList(container, refresh) {
     const act = e.target.closest('[data-act]')?.dataset.act; if (!act || act === 'lead') return;
     const id = Number(row.dataset.id);
     if (act === 'toggle') { try { await toggleTask(id, !row.classList.contains('done')); await loadTasks(); refresh(); } catch (x) { toast('Error', 'err'); } }
-    else if (act === 'del') { if (!confirm('¿Eliminar esta tarea?')) return; try { await api('DELETE', `/api/tasks/${id}`); await loadTasks(); refresh(); toast('Tarea eliminada'); } catch (x) { toast('Error', 'err'); } }
+    else if (act === 'del') { if (!confirm('Delete this task?')) return; try { await api('DELETE', `/api/tasks/${id}`); await loadTasks(); refresh(); toast('Task deleted'); } catch (x) { toast('Error', 'err'); } }
   };
 }
 async function viewTasks() {
   const v = $('#view');
   v.innerHTML = `
     <div class="topbar">
-      <div><span class="ey">Seguimiento</span><h1>Tareas y recordatorios</h1></div>
-      <div class="tools"><button class="btn btn-primary btn-sm" id="new-task">+ Nueva tarea</button></div>
+      <div><span class="ey">Follow-up</span><h1>Tasks &amp; reminders</h1></div>
+      <div class="tools"><button class="btn btn-primary btn-sm" id="new-task">+ New task</button></div>
     </div>
     <div class="filters" id="task-filters">
-      <button class="fbtn active" data-f="pendiente">Pendientes</button>
-      <button class="fbtn" data-f="hecha">Hechas</button>
-      <button class="fbtn" data-f="all">Todas</button>
+      <button class="fbtn active" data-f="pendiente">Pending</button>
+      <button class="fbtn" data-f="hecha">Done</button>
+      <button class="fbtn" data-f="all">All</button>
     </div>
-    <div id="task-list" class="task-list"><div class="empty">Cargando…</div></div>`;
+    <div id="task-list" class="task-list"><div class="empty">Loading…</div></div>`;
   $('#new-task').addEventListener('click', () => openTaskModal({ onSaved: () => paintTasks(curTaskScope) }));
   const filters = $('#task-filters');
   filters.addEventListener('click', (e) => { const b = e.target.closest('.fbtn'); if (!b) return; filters.querySelectorAll('.fbtn').forEach((x) => x.classList.toggle('active', x === b)); paintTasks(b.dataset.f); });
@@ -712,31 +712,31 @@ async function paintTasks(scope) {
   const list = $('#task-list'); if (!list) return;
   let rows;
   try { rows = await api('GET', '/api/tasks' + (scope && scope !== 'all' ? '?scope=' + scope : '')); }
-  catch (e) { list.innerHTML = '<div class="empty">Error al cargar</div>'; return; }
-  if (!rows.length) { list.innerHTML = `<div class="empty"><div class="big">Sin tareas ${scope === 'hecha' ? 'hechas' : 'pendientes'}</div>Crea un recordatorio (ej. “llamar al lead”) para no perder ningún seguimiento.</div>`; return; }
+  catch (e) { list.innerHTML = '<div class="empty">Error loading</div>'; return; }
+  if (!rows.length) { list.innerHTML = `<div class="empty"><div class="big">No ${scope === 'hecha' ? 'completed' : 'pending'} tasks</div>Create a reminder (e.g. “call the lead”) so no follow-up slips.</div>`; return; }
   // Orden: por fecha de vencimiento, de la más reciente a la más vieja (lo entrega ya la API en DESC).
   list.innerHTML = rows.map((t) => taskRowHTML(t, { showLead: true })).join('');
   wireTaskList(list, () => paintTasks(scope));
 }
 function openTaskModal(prefill = {}) {
-  const leadOpts = ['<option value="">— Sin lead —</option>', ...state.leads.map((l) => `<option value="${l.id}" ${l.id === prefill.lead_id ? 'selected' : ''}>${esc(fullName(l))}</option>`)].join('');
+  const leadOpts = ['<option value="">— No lead —</option>', ...state.leads.map((l) => `<option value="${l.id}" ${l.id === prefill.lead_id ? 'selected' : ''}>${esc(fullName(l))}</option>`)].join('');
   const ownerOpts = state.users.map((u) => `<option value="${u.id}" ${u.id === state.me.id ? 'selected' : ''}>${esc(u.name)}</option>`).join('');
   modal(`
-    <h2>Nueva tarea</h2>
-    <p class="desc">Un recordatorio de seguimiento. Se te avisará por correo cuando esté por vencer.</p>
-    <div class="field"><label>Tarea</label><input id="t-title" placeholder="Ej. Llamar al lead" value="${esc(prefill.title || '')}"></div>
-    <div class="field"><label>Lead relacionado</label><select id="t-lead">${leadOpts}</select></div>
-    <div class="field"><label>Vence</label><input id="t-due" type="datetime-local"></div>
+    <h2>New task</h2>
+    <p class="desc">A follow-up reminder. You will get an email when it is due.</p>
+    <div class="field"><label>Task</label><input id="t-title" placeholder="e.g. Call the lead" value="${esc(prefill.title || '')}"></div>
+    <div class="field"><label>Related lead</label><select id="t-lead">${leadOpts}</select></div>
+    <div class="field"><label>Due</label><input id="t-due" type="datetime-local"></div>
     <div class="task-presets" id="t-presets">
-      <button class="chip-btn" data-min="60">En 1 h</button>
-      <button class="chip-btn" data-min="180">En 3 h</button>
-      <button class="chip-btn" data-tom="9">Mañana 9:00</button>
-      <button class="chip-btn" data-days="3">En 3 días</button>
+      <button class="chip-btn" data-min="60">In 1 h</button>
+      <button class="chip-btn" data-min="180">In 3 h</button>
+      <button class="chip-btn" data-tom="9">Tomorrow 9:00</button>
+      <button class="chip-btn" data-days="3">In 3 days</button>
     </div>
-    <div class="field"><label>Responsable</label><select id="t-owner">${ownerOpts}</select></div>
+    <div class="field"><label>Owner</label><select id="t-owner">${ownerOpts}</select></div>
     <div class="modal-foot">
-      <button class="btn btn-ghost btn-sm" id="t-cancel">Cancelar</button>
-      <button class="btn btn-primary btn-sm" id="t-ok">Crear tarea</button>
+      <button class="btn btn-ghost btn-sm" id="t-cancel">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="t-ok">Create task</button>
     </div>`);
   $('#t-presets').addEventListener('click', (e) => {
     const b = e.target.closest('.chip-btn'); if (!b) return; e.preventDefault();
@@ -750,7 +750,7 @@ function openTaskModal(prefill = {}) {
   $('#t-cancel').addEventListener('click', closeModal);
   $('#t-ok').addEventListener('click', async () => {
     const title = $('#t-title').value.trim();
-    if (!title) { toast('Escribe la tarea', 'err'); return; }
+    if (!title) { toast('Enter the task', 'err'); return; }
     const dueVal = $('#t-due').value;
     const body = {
       title,
@@ -758,8 +758,8 @@ function openTaskModal(prefill = {}) {
       owner_id: Number($('#t-owner').value) || null,
       due_at: dueVal ? new Date(dueVal).toISOString() : null,
     };
-    try { await api('POST', '/api/tasks', body); closeModal(); await loadTasks(); toast('Tarea creada'); prefill.onSaved && prefill.onSaved(); }
-    catch (e) { toast('Error al crear la tarea', 'err'); }
+    try { await api('POST', '/api/tasks', body); closeModal(); await loadTasks(); toast('Task created'); prefill.onSaved && prefill.onSaved(); }
+    catch (e) { toast('Error creating the task', 'err'); }
   });
 }
 
@@ -772,21 +772,21 @@ async function viewUsers() {
   const isAdmin = state.me.role === 'admin';
   v.innerHTML = `
     <div class="topbar">
-      <div><span class="ey">Equipo</span><h1>Usuarios del CRM</h1></div>
-      <div class="tools">${isAdmin ? '<button class="btn btn-primary btn-sm" id="new-user">+ Crear usuario</button>' : ''}</div>
+      <div><span class="ey">Team</span><h1>CRM users</h1></div>
+      <div class="tools">${isAdmin ? '<button class="btn btn-primary btn-sm" id="new-user">+ Create user</button>' : ''}</div>
     </div>
-    ${!isAdmin ? '<p style="color:var(--mute);font-size:.82rem;margin-bottom:14px">Solo los administradores pueden crear o editar usuarios.</p>' : ''}
+    ${!isAdmin ? '<p style="color:var(--mute);font-size:.82rem;margin-bottom:14px">Only administrators can create or edit users.</p>' : ''}
     <div class="panel"><table><thead><tr>
-      <th>Usuario</th><th>Correo</th><th>Rol</th><th>Estado</th>${isAdmin ? '<th></th>' : ''}
+      <th>User</th><th>Email</th><th>Role</th><th>Status</th>${isAdmin ? '<th></th>' : ''}
     </tr></thead><tbody>
     ${state.users.map((u) => `<tr>
       <td><div style="display:flex;align-items:center;gap:10px"><span class="avatar" style="width:30px;height:30px;font-size:.8rem">${initials(u.name)}</span><span class="lead-nm" style="font-size:.92rem">${esc(u.name)}</span></div></td>
       <td>${esc(u.email)}</td>
       <td><span class="status-pill ${u.role === 'admin' ? 'st-ganado' : 'st-registrado'}">${roleLabel(u.role)}</span></td>
-      <td>${u.active ? '<span style="color:var(--green)">● Activo</span>' : '<span style="color:var(--mute)">○ Inactivo</span>'}</td>
+      <td>${u.active ? '<span style="color:var(--green)">● Active</span>' : '<span style="color:var(--mute)">○ Inactive</span>'}</td>
       ${isAdmin ? `<td style="text-align:right;white-space:nowrap">
-        ${u.id !== state.me.id ? `<button class="btn btn-ghost btn-sm" data-imp="${u.id}">Entrar como</button>` : ''}
-        <button class="btn btn-ghost btn-sm" data-edit="${u.id}">Editar</button>
+        ${u.id !== state.me.id ? `<button class="btn btn-ghost btn-sm" data-imp="${u.id}">Log in as</button>` : ''}
+        <button class="btn btn-ghost btn-sm" data-edit="${u.id}">Edit</button>
       </td>` : ''}
     </tr>`).join('')}
     </tbody></table></div>`;
@@ -796,58 +796,58 @@ async function viewUsers() {
     v.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => openEditUser(state.users.find((u) => u.id === Number(b.dataset.edit)))));
     v.querySelectorAll('[data-imp]').forEach((b) => b.addEventListener('click', async () => {
       const u = state.users.find((x) => x.id === Number(b.dataset.imp));
-      if (!confirm(`¿Entrar a la plataforma como ${u.name}? Navegarás el CRM con los permisos de ${roleLabel(u.role)}. Podrás volver a tu cuenta cuando quieras.`)) return;
+      if (!confirm(`Log in as ${u.name}? You will browse the CRM with ${roleLabel(u.role)} permissions. You can return to your account anytime.`)) return;
       try { await api('POST', `/api/users/${b.dataset.imp}/impersonate`); location.reload(); }
-      catch (e) { toast('No se pudo entrar como usuario', 'err'); }
+      catch (e) { toast('Could not log in as that user', 'err'); }
     }));
   }
 }
 
 function openNewUser() {
   modal(`
-    <h2>Crear usuario</h2>
-    <p class="desc">Podrá acceder con su correo vía enlace mágico.</p>
-    <div class="field"><label>Nombre completo</label><input id="u-name"></div>
-    <div class="field"><label>Correo</label><input id="u-email" type="email"></div>
-    <div class="field"><label>Rol</label><select id="u-role"><option value="comercial">Comercial</option><option value="admin">Administrador</option></select></div>
+    <h2>Create user</h2>
+    <p class="desc">They will sign in with their email via magic link.</p>
+    <div class="field"><label>Full name</label><input id="u-name"></div>
+    <div class="field"><label>Email</label><input id="u-email" type="email"></div>
+    <div class="field"><label>Role</label><select id="u-role"><option value="comercial">Sales</option><option value="admin">Administrator</option></select></div>
     <div class="modal-foot">
-      <button class="btn btn-ghost btn-sm" id="u-cancel">Cancelar</button>
-      <button class="btn btn-primary btn-sm" id="u-ok">Crear</button>
+      <button class="btn btn-ghost btn-sm" id="u-cancel">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="u-ok">Create</button>
     </div>`);
   $('#u-cancel').addEventListener('click', closeModal);
   $('#u-ok').addEventListener('click', async () => {
     const body = { name: $('#u-name').value, email: $('#u-email').value, role: $('#u-role').value };
-    if (!body.name || !body.email) { toast('Nombre y correo requeridos', 'err'); return; }
-    try { await api('POST', '/api/users', body); closeModal(); viewUsers(); toast('Usuario creado'); }
-    catch (e) { toast(e.message === 'email already exists' ? 'Ese correo ya existe' : 'Error al crear', 'err'); }
+    if (!body.name || !body.email) { toast('Name and email required', 'err'); return; }
+    try { await api('POST', '/api/users', body); closeModal(); viewUsers(); toast('User created'); }
+    catch (e) { toast(e.message === 'email already exists' ? 'That email already exists' : 'Error creating', 'err'); }
   });
 }
 
 function openEditUser(u) {
   if (!u) return;
   modal(`
-    <h2>Editar usuario</h2>
-    <p class="desc">Actualiza los datos y el rol. El comercial no puede eliminar leads ni ver Usuarios/Configuración.</p>
-    <div class="field"><label>Nombre completo</label><input id="u-name" value="${esc(u.name)}"></div>
-    <div class="field"><label>Correo</label><input id="u-email" type="email" value="${esc(u.email)}"></div>
-    <div class="field"><label>Rol</label><select id="u-role">
-      <option value="comercial" ${u.role === 'comercial' ? 'selected' : ''}>Comercial</option>
-      <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Administrador</option>
+    <h2>Edit user</h2>
+    <p class="desc">Update the details and role. Sales cannot delete leads or see Users/Settings.</p>
+    <div class="field"><label>Full name</label><input id="u-name" value="${esc(u.name)}"></div>
+    <div class="field"><label>Email</label><input id="u-email" type="email" value="${esc(u.email)}"></div>
+    <div class="field"><label>Role</label><select id="u-role">
+      <option value="comercial" ${u.role === 'comercial' ? 'selected' : ''}>Sales</option>
+      <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Administrator</option>
     </select></div>
-    <div class="field"><label>Estado</label><select id="u-active">
-      <option value="1" ${u.active ? 'selected' : ''}>Activo</option>
-      <option value="0" ${!u.active ? 'selected' : ''}>Inactivo</option>
+    <div class="field"><label>Status</label><select id="u-active">
+      <option value="1" ${u.active ? 'selected' : ''}>Active</option>
+      <option value="0" ${!u.active ? 'selected' : ''}>Inactive</option>
     </select></div>
     <div class="modal-foot">
-      <button class="btn btn-ghost btn-sm" id="u-cancel">Cancelar</button>
-      <button class="btn btn-primary btn-sm" id="u-ok">Guardar cambios</button>
+      <button class="btn btn-ghost btn-sm" id="u-cancel">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="u-ok">Save changes</button>
     </div>`);
   $('#u-cancel').addEventListener('click', closeModal);
   $('#u-ok').addEventListener('click', async () => {
     const body = { name: $('#u-name').value, email: $('#u-email').value, role: $('#u-role').value, active: Number($('#u-active').value) };
-    if (!body.name || !body.email) { toast('Nombre y correo requeridos', 'err'); return; }
-    try { await api('PATCH', `/api/users/${u.id}`, body); closeModal(); viewUsers(); toast('Usuario actualizado'); }
-    catch (e) { toast(e.message === 'email already exists' ? 'Ese correo ya existe' : 'Error al guardar', 'err'); }
+    if (!body.name || !body.email) { toast('Name and email required', 'err'); return; }
+    try { await api('PATCH', `/api/users/${u.id}`, body); closeModal(); viewUsers(); toast('User updated'); }
+    catch (e) { toast(e.message === 'email already exists' ? 'That email already exists' : 'Error saving', 'err'); }
   });
 }
 
@@ -858,13 +858,13 @@ async function viewRedirects() {
   const v = $('#view');
   let rows = [];
   try { rows = await api('GET', '/api/redirects'); }
-  catch (e) { v.innerHTML = '<div class="empty"><div class="big">Acceso restringido</div>Solo los administradores pueden gestionar redirecciones.</div>'; return; }
+  catch (e) { v.innerHTML = '<div class="empty"><div class="big">Restricted access</div>Only administrators can manage redirects.</div>'; return; }
   v.innerHTML = `
     <div class="topbar">
-      <div><span class="ey">SEO</span><h1>Redirecciones 301</h1></div>
-      <div class="tools"><button class="btn btn-primary btn-sm" id="new-rd">+ Crear redirección</button></div>
+      <div><span class="ey">SEO</span><h1>301 Redirects</h1></div>
+      <div class="tools"><button class="btn btn-primary btn-sm" id="new-rd">+ Create redirect</button></div>
     </div>
-    <p style="color:var(--mute);font-size:.82rem;margin-bottom:16px;max-width:74ch;line-height:1.6">Envía una ruta antigua a una nueva con un <b>301</b> (permanente) o <b>302</b> (temporal). Ideal al renombrar páginas: conservas el posicionamiento y no rompes enlaces externos. No se permite redirigir <code>/</code>, <code>/crm</code> ni <code>/api</code>.</p>
+    <p style="color:var(--mute);font-size:.82rem;margin-bottom:16px;max-width:74ch;line-height:1.6">Send an old path to a new one with a <b>301</b> (permanent) or <b>302</b> (temporary). Ideal when renaming pages: you keep your rankings and don't break external links. You can't redirect <code>/</code>, <code>/crm</code> or <code>/api</code>.</p>
     <div class="panel"><div id="rd-table"></div></div>`;
   $('#new-rd').addEventListener('click', openNewRedirect);
   paintRedirects(rows);
@@ -872,57 +872,57 @@ async function viewRedirects() {
 
 function paintRedirects(rows) {
   const wrap = $('#rd-table'); if (!wrap) return;
-  if (!rows.length) { wrap.innerHTML = `<div class="empty"><div class="big">Sin redirecciones</div>Crea la primera con “+ Crear redirección”.</div>`; return; }
+  if (!rows.length) { wrap.innerHTML = `<div class="empty"><div class="big">No redirects</div>Create the first one with “+ Create redirect”.</div>`; return; }
   wrap.innerHTML = `<table><thead><tr>
-    <th>Origen</th><th>Destino</th><th>Tipo</th><th>Estado</th><th>Hits</th><th></th>
+    <th>Source</th><th>Target</th><th>Type</th><th>Status</th><th>Hits</th><th></th>
     </tr></thead><tbody>
     ${rows.map((r) => `<tr>
       <td><code class="rd-path">${esc(r.from_path)}</code></td>
       <td><span class="rd-arrow">→</span> <code class="rd-path">${esc(r.to_path)}</code></td>
       <td><span class="status-pill ${r.code === 301 ? 'st-ganado' : 'st-contactado'}">${r.code}</span></td>
-      <td>${r.active ? '<span style="color:var(--green)">● Activa</span>' : '<span style="color:var(--mute)">○ Inactiva</span>'}</td>
+      <td>${r.active ? '<span style="color:var(--green)">● Active</span>' : '<span style="color:var(--mute)">○ Inactive</span>'}</td>
       <td><span style="font-family:var(--mono);color:var(--dim)">${r.hits}</span></td>
       <td style="text-align:right;white-space:nowrap">
-        <button class="btn btn-ghost btn-sm" data-rd-edit="${r.id}">Editar</button>
-        <button class="btn btn-ghost btn-sm" data-rd-del="${r.id}">Eliminar</button>
+        <button class="btn btn-ghost btn-sm" data-rd-edit="${r.id}">Edit</button>
+        <button class="btn btn-ghost btn-sm" data-rd-del="${r.id}">Delete</button>
       </td>
     </tr>`).join('')}
   </tbody></table>`;
   wrap.querySelectorAll('[data-rd-edit]').forEach((b) => b.addEventListener('click', () => openEditRedirect(rows.find((x) => x.id === Number(b.dataset.rdEdit)))));
   wrap.querySelectorAll('[data-rd-del]').forEach((b) => b.addEventListener('click', async () => {
-    if (!confirm('¿Eliminar esta redirección?')) return;
-    try { await api('DELETE', `/api/redirects/${b.dataset.rdDel}`); viewRedirects(); toast('Redirección eliminada'); }
-    catch (e) { toast('No se pudo eliminar', 'err'); }
+    if (!confirm('Delete this redirect?')) return;
+    try { await api('DELETE', `/api/redirects/${b.dataset.rdDel}`); viewRedirects(); toast('Redirect deleted'); }
+    catch (e) { toast("Couldn't delete", 'err'); }
   }));
 }
 
 function redirectForm(r) {
   const isEdit = !!r;
   return `
-    <h2>${isEdit ? 'Editar redirección' : 'Crear redirección'}</h2>
-    <p class="desc">El origen es una ruta del sitio (ej. <code>/pagina-antigua</code>). El destino puede ser una ruta (<code>/the-way</code>) o una URL completa.</p>
-    <div class="field"><label>Origen (ruta antigua)</label><input id="rd-from" placeholder="/pagina-antigua" value="${esc(r ? r.from_path : '')}"></div>
-    <div class="field"><label>Destino</label><input id="rd-to" placeholder="/pagina-nueva" value="${esc(r ? r.to_path : '')}"></div>
-    <div class="field"><label>Tipo</label><select id="rd-code">
-      <option value="301" ${!r || r.code === 301 ? 'selected' : ''}>301 — Permanente (recomendado para SEO)</option>
-      <option value="302" ${r && r.code === 302 ? 'selected' : ''}>302 — Temporal</option>
+    <h2>${isEdit ? 'Edit redirect' : 'Create redirect'}</h2>
+    <p class="desc">The source is a site path (e.g. <code>/old-page</code>). The target can be a path (<code>/the-way</code>) or a full URL.</p>
+    <div class="field"><label>Source (old path)</label><input id="rd-from" placeholder="/old-page" value="${esc(r ? r.from_path : '')}"></div>
+    <div class="field"><label>Target</label><input id="rd-to" placeholder="/new-page" value="${esc(r ? r.to_path : '')}"></div>
+    <div class="field"><label>Type</label><select id="rd-code">
+      <option value="301" ${!r || r.code === 301 ? 'selected' : ''}>301 — Permanent (recommended for SEO)</option>
+      <option value="302" ${r && r.code === 302 ? 'selected' : ''}>302 — Temporary</option>
     </select></div>
-    ${isEdit ? `<div class="field"><label>Estado</label><select id="rd-active">
-      <option value="1" ${r.active ? 'selected' : ''}>Activa</option>
-      <option value="0" ${!r.active ? 'selected' : ''}>Inactiva</option>
+    ${isEdit ? `<div class="field"><label>Status</label><select id="rd-active">
+      <option value="1" ${r.active ? 'selected' : ''}>Active</option>
+      <option value="0" ${!r.active ? 'selected' : ''}>Inactive</option>
     </select></div>` : ''}
     <div class="modal-foot">
-      <button class="btn btn-ghost btn-sm" id="rd-cancel">Cancelar</button>
-      <button class="btn btn-primary btn-sm" id="rd-ok">${isEdit ? 'Guardar' : 'Crear'}</button>
+      <button class="btn btn-ghost btn-sm" id="rd-cancel">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="rd-ok">${isEdit ? 'Save' : 'Create'}</button>
     </div>`;
 }
 
 function redirErr(e) {
   const m = String(e && e.message || '');
-  if (m.includes('ya existe')) return 'Ya existe una redirección para ese origen';
-  if (m.includes('iguales')) return 'El origen y el destino no pueden ser iguales';
-  if (m.includes('no permitido')) return 'Origen no permitido (no uses /, /crm o /api)';
-  return 'No se pudo guardar la redirección';
+  if (m.includes('already exists')) return 'A redirect already exists for that source';
+  if (m.includes('cannot be the same')) return 'Source and target cannot be the same';
+  if (m.includes('not allowed')) return 'Source not allowed (do not use /, /crm or /api)';
+  return 'Could not save the redirect';
 }
 
 function openNewRedirect() {
@@ -930,8 +930,8 @@ function openNewRedirect() {
   $('#rd-cancel').addEventListener('click', closeModal);
   $('#rd-ok').addEventListener('click', async () => {
     const body = { from_path: $('#rd-from').value, to_path: $('#rd-to').value, code: Number($('#rd-code').value) };
-    if (!body.from_path.trim() || !body.to_path.trim()) { toast('Origen y destino requeridos', 'err'); return; }
-    try { await api('POST', '/api/redirects', body); closeModal(); viewRedirects(); toast('Redirección creada'); }
+    if (!body.from_path.trim() || !body.to_path.trim()) { toast('Source and target required', 'err'); return; }
+    try { await api('POST', '/api/redirects', body); closeModal(); viewRedirects(); toast('Redirect created'); }
     catch (e) { toast(redirErr(e), 'err'); }
   });
 }
@@ -942,8 +942,8 @@ function openEditRedirect(r) {
   $('#rd-cancel').addEventListener('click', closeModal);
   $('#rd-ok').addEventListener('click', async () => {
     const body = { from_path: $('#rd-from').value, to_path: $('#rd-to').value, code: Number($('#rd-code').value), active: Number($('#rd-active').value) };
-    if (!body.from_path.trim() || !body.to_path.trim()) { toast('Origen y destino requeridos', 'err'); return; }
-    try { await api('PATCH', `/api/redirects/${r.id}`, body); closeModal(); viewRedirects(); toast('Redirección actualizada'); }
+    if (!body.from_path.trim() || !body.to_path.trim()) { toast('Source and target required', 'err'); return; }
+    try { await api('PATCH', `/api/redirects/${r.id}`, body); closeModal(); viewRedirects(); toast('Redirect updated'); }
     catch (e) { toast(redirErr(e), 'err'); }
   });
 }
@@ -952,24 +952,24 @@ function openEditRedirect(r) {
 //  SETTINGS — configuración del sitio (componentes externos)
 // ============================================================
 const TAG_FIELDS = [
-  ['ga4_id', 'Google Analytics 4', 'G-XXXXXXXXXX', 'Measurement ID de GA4.'],
-  ['google_tag_id', 'Google Tag (Site Kit)', 'GT-XXXXXXX', 'Etiqueta de Google que envuelve GA4.'],
-  ['gtm_id', 'Google Tag Manager', 'GTM-XXXXXXX', 'ID del contenedor GTM (opcional).'],
-  ['meta_pixel_id', 'Meta (Facebook) Pixel', '918178380081272', 'ID numérico del píxel de Meta.'],
-  ['google_ads_id', 'Google Ads (Conversión)', 'AW-XXXXXXXXX', 'ID de conversión de Google Ads (opcional).'],
-  ['tiktok_pixel_id', 'TikTok Pixel', 'CXXXXXXXXXXXXXXXXX', 'ID del píxel de TikTok (opcional).'],
+  ['ga4_id', 'Google Analytics 4', 'G-XXXXXXXXXX', 'GA4 Measurement ID.'],
+  ['google_tag_id', 'Google Tag (Site Kit)', 'GT-XXXXXXX', 'Google tag that wraps GA4.'],
+  ['gtm_id', 'Google Tag Manager', 'GTM-XXXXXXX', 'GTM container ID (optional).'],
+  ['meta_pixel_id', 'Meta (Facebook) Pixel', '918178380081272', 'Meta pixel numeric ID.'],
+  ['google_ads_id', 'Google Ads (Conversion)', 'AW-XXXXXXXXX', 'Google Ads conversion ID (optional).'],
+  ['tiktok_pixel_id', 'TikTok Pixel', 'CXXXXXXXXXXXXXXXXX', 'TikTok pixel ID (optional).'],
 ];
 const VERIFY_FIELDS = [
-  ['google_site_verification', 'Google Search Console', 'código de verificación', 'Solo el valor "content" del meta google-site-verification.'],
-  ['facebook_domain_verification', 'Meta / Facebook (dominio)', 'código de verificación', 'Valor de facebook-domain-verification.'],
-  ['bing_site_verification', 'Bing Webmaster', 'código msvalidate.01', 'Opcional.'],
+  ['google_site_verification', 'Google Search Console', 'verification code', 'Only the "content" value of the google-site-verification meta.'],
+  ['facebook_domain_verification', 'Meta / Facebook (domain)', 'verification code', 'facebook-domain-verification value.'],
+  ['bing_site_verification', 'Bing Webmaster', 'msvalidate.01 code', 'Optional.'],
 ];
-const TEXT_FIELDS = [['eyebrow', 'Etiqueta', false], ['heading', 'Título', false], ['intro', 'Intro', true], ['submit', 'Texto del botón', false], ['privacy', 'Aviso de privacidad', false]];
+const TEXT_FIELDS = [['eyebrow', 'Eyebrow', false], ['heading', 'Heading', false], ['intro', 'Intro', true], ['submit', 'Button text', false], ['privacy', 'Privacy notice', false]];
 
 async function viewSettings() {
   const v = $('#view');
-  v.innerHTML = `<div class="empty">Cargando…</div>`;
-  let s; try { s = await api('GET', '/api/settings'); } catch (e) { v.innerHTML = '<div class="empty">Error al cargar.</div>'; return; }
+  v.innerHTML = `<div class="empty">Loading…</div>`;
+  let s; try { s = await api('GET', '/api/settings'); } catch (e) { v.innerHTML = '<div class="empty">Error loading.</div>'; return; }
   const isAdmin = state.me.role === 'admin';
   const dis = isAdmin ? '' : 'disabled';
   const on = s.tracking_enabled === '1';
@@ -978,34 +978,34 @@ async function viewSettings() {
 
   v.innerHTML = `
     <div class="topbar">
-      <div><span class="ey">Configuración del sitio</span><h1>Componentes externos</h1></div>
+      <div><span class="ey">Site settings</span><h1>External components</h1></div>
     </div>
-    ${!isAdmin ? '<p style="color:var(--mute);font-size:.82rem;margin-bottom:14px">Solo los administradores pueden editar la configuración.</p>' : ''}
+    ${!isAdmin ? '<p style="color:var(--mute);font-size:.82rem;margin-bottom:14px">Only administrators can edit settings.</p>' : ''}
     <div class="detail-grid">
       <div class="detail-main">
         <div class="card-box">
-          <div class="section-t">Formulario de captura (web)</div>
-          <p class="field-help" style="margin:-2px 0 16px">Edita los textos y campos del formulario del sitio (<code class="mono">/join-the-family</code>). Bilingüe EN/ES.</p>
+          <div class="section-t">Capture form (web)</div>
+          <p class="field-help" style="margin:-2px 0 16px">Edit the text and fields of the site form (<code class="mono">/join-the-family</code>). Bilingual EN/ES.</p>
           ${TEXT_FIELDS.map(([k, label, multi]) => `
             <div class="form-row">
               <div class="field"><label>${label} (EN)</label>${multi ? `<textarea id="ft-${k}-en" rows="2" ${dis}>${esc(txt[k + '_en'] || '')}</textarea>` : `<input id="ft-${k}-en" value="${esc(txt[k + '_en'] || '')}" ${dis}>`}</div>
               <div class="field"><label>${label} (ES)</label>${multi ? `<textarea id="ft-${k}-es" rows="2" ${dis}>${esc(txt[k + '_es'] || '')}</textarea>` : `<input id="ft-${k}-es" value="${esc(txt[k + '_es'] || '')}" ${dis}>`}</div>
             </div>`).join('')}
           <div class="fb-bar">
-            <div><div class="fb-title">Campos del Formulario</div><div class="fb-sub">Campos que el visitante completa antes de enviar la solicitud</div></div>
+            <div><div class="fb-title">Form Fields</div><div class="fb-sub">Fields the visitor fills in before submitting</div></div>
             <div class="fb-bar-actions">
               <div class="fb-langs" id="fb-langs"><button type="button" data-fl="en" class="active">EN</button><button type="button" data-fl="es">ES</button></div>
-              ${isAdmin ? '<button type="button" class="btn-add" id="fb-add">+ Agregar Campo</button>' : ''}
+              ${isAdmin ? '<button type="button" class="btn-add" id="fb-add">+ Add Field</button>' : ''}
             </div>
           </div>
           <div id="fb-list"></div>
-          ${isAdmin ? '<button class="btn btn-primary btn-sm" id="fb-save" style="margin-top:14px">Guardar formulario</button>' : ''}
+          ${isAdmin ? '<button class="btn btn-primary btn-sm" id="fb-save" style="margin-top:14px">Save form</button>' : ''}
         </div>
 
         <div class="card-box">
-          <div class="section-t">Analítica y marketing</div>
+          <div class="section-t">Analytics &amp; marketing</div>
           <div class="set-toggle">
-            <div><div class="lab">Activar etiquetas en el sitio</div><div style="font-size:.74rem;color:var(--mute)">Si lo apagas, no se carga ninguna herramienta en el sitio público.</div></div>
+            <div><div class="lab">Enable tags on the site</div><div style="font-size:.74rem;color:var(--mute)">If off, no tool loads on the public site.</div></div>
             <label class="switch"><input type="checkbox" id="set-tracking_enabled" ${on ? 'checked' : ''} ${dis}><span></span></label>
           </div>
           ${TAG_FIELDS.map(([k, label, ph, help]) => `
@@ -1017,7 +1017,7 @@ async function viewSettings() {
         </div>
 
         <div class="card-box">
-          <div class="section-t">Verificación de dominio</div>
+          <div class="section-t">Domain verification</div>
           ${VERIFY_FIELDS.map(([k, label, ph, help]) => `
             <div class="field">
               <label>${label}</label>
@@ -1027,24 +1027,24 @@ async function viewSettings() {
         </div>
 
         <div class="card-box">
-          <div class="section-t">HTML personalizado en &lt;head&gt;</div>
+          <div class="section-t">Custom HTML in &lt;head&gt;</div>
           <div class="field">
-            <textarea id="set-custom_head" rows="6" placeholder="<!-- Pega aquí etiquetas para el <head>: scripts, metas, verificaciones de otras herramientas… -->" spellcheck="false" ${dis} style="font-family:var(--mono);font-size:.8rem;line-height:1.5">${esc(s.custom_head || '')}</textarea>
-            <div class="field-help">Se inyecta tal cual en el &lt;head&gt; de todas las páginas públicas (solo admin) — para cualquier herramienta futura.</div>
+            <textarea id="set-custom_head" rows="6" placeholder="<!-- Paste tags for the <head> here: scripts, metas, verifications for other tools… -->" spellcheck="false" ${dis} style="font-family:var(--mono);font-size:.8rem;line-height:1.5">${esc(s.custom_head || '')}</textarea>
+            <div class="field-help">Injected as-is into the &lt;head&gt; of all public pages (admin only) — for any future tool.</div>
           </div>
         </div>
 
-        ${isAdmin ? '<button class="btn btn-primary btn-sm" id="set-save">Guardar configuración</button>' : ''}
+        ${isAdmin ? '<button class="btn btn-primary btn-sm" id="set-save">Save settings</button>' : ''}
       </div>
       <aside class="detail-side">
         <div class="card-box">
-          <div class="section-t">Cómo funciona</div>
-          <p style="font-size:.86rem;color:var(--dim);line-height:1.6">Estos IDs alimentan el <code class="mono">analytics.js</code> del sitio público vía <code class="mono">/api/public/site-config</code>. Lo que cambies aquí se aplica en el sitio <b>sin tocar código</b>.</p>
-          <p style="font-size:.82rem;color:var(--mute);line-height:1.6;margin-top:12px">Las etiquetas no se disparan en <b>localhost</b> (pruebas), solo en el dominio real. Deja un campo vacío para no cargar esa herramienta.</p>
+          <div class="section-t">How it works</div>
+          <p style="font-size:.86rem;color:var(--dim);line-height:1.6">These IDs feed the public site's <code class="mono">analytics.js</code> via <code class="mono">/api/public/site-config</code>. Changes here apply to the site <b>without touching code</b>.</p>
+          <p style="font-size:.82rem;color:var(--mute);line-height:1.6;margin-top:12px">Tags don't fire on <b>localhost</b> (testing), only on the real domain. Leave a field empty to skip that tool.</p>
         </div>
         <div class="card-box">
-          <div class="section-t">Importado del sitio actual</div>
-          <p style="font-size:.82rem;color:var(--dim);line-height:1.6">GA4 <b>G-MXNZZXDP2E</b> · Google Tag <b>GT-M3VXNNZ</b> · Meta Pixel <b>918178380081272</b> (desde jkdlegacy.com.au).</p>
+          <div class="section-t">Imported from the current site</div>
+          <p style="font-size:.82rem;color:var(--dim);line-height:1.6">GA4 <b>G-MXNZZXDP2E</b> · Google Tag <b>GT-M3VXNNZ</b> · Meta Pixel <b>918178380081272</b> (from jkdlegacy.com.au).</p>
         </div>
       </aside>
     </div>`;
@@ -1054,15 +1054,15 @@ async function viewSettings() {
       const body = { tracking_enabled: $('#set-tracking_enabled').checked ? '1' : '0' };
       TAG_FIELDS.concat(VERIFY_FIELDS).forEach(([k]) => { body[k] = $('#set-' + k).value.trim(); });
       body.custom_head = $('#set-custom_head').value;
-      try { await api('PUT', '/api/settings', body); toast('Configuración guardada'); }
-      catch (e) { toast(e.message === 'admin only' ? 'Solo administradores' : 'Error al guardar', 'err'); }
+      try { await api('PUT', '/api/settings', body); toast('Settings saved'); }
+      catch (e) { toast(e.message === 'admin only' ? 'Administrators only' : 'Error saving', 'err'); }
     });
   }
 
   // ----- Constructor del formulario (compacto · bilingüe · arrastrar) -----
   let formState = (_fc.fields || []).map((f) => Object.assign({}, f));
   let fbLang = 'en';
-  const FB_TYPES = [['text', 'Texto'], ['email', 'Email'], ['tel', 'Teléfono'], ['select', 'Selección'], ['textarea', 'Mensaje']];
+  const FB_TYPES = [['text', 'Text'], ['email', 'Email'], ['tel', 'Phone'], ['select', 'Selection'], ['textarea', 'Message']];
   const slugKey = (label, i) => (String(label || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '') || 'campo') + '_' + (i + 1);
   function fbSync() {
     [...document.querySelectorAll('#fb-list .fbf')].forEach((row) => {
@@ -1082,14 +1082,14 @@ async function viewSettings() {
     const lk = fbLang === 'es' ? 'labelEs' : 'label', pk = fbLang === 'es' ? 'placeholderEs' : 'placeholder', ok = fbLang === 'es' ? 'optionsEs' : 'options';
     host.innerHTML = formState.map((f, i) => `
       <div class="fbf" data-i="${i}" ${isAdmin ? 'draggable="true"' : ''}>
-        ${isAdmin ? '<span class="fbf-drag" title="Arrastrar para reordenar">⠿</span>' : ''}
-        <input class="fbf-in fbf-label" data-k="${lk}" value="${esc(f[lk] || '')}" placeholder="Etiqueta" ${dis}>
+        ${isAdmin ? '<span class="fbf-drag" title="Drag to reorder">⠿</span>' : ''}
+        <input class="fbf-in fbf-label" data-k="${lk}" value="${esc(f[lk] || '')}" placeholder="Label" ${dis}>
         <select class="fbf-in fbf-type" data-k="type" ${dis}>${FB_TYPES.map(([vv, ll]) => `<option value="${vv}" ${f.type === vv ? 'selected' : ''}>${ll}</option>`).join('')}</select>
         <input class="fbf-in fbf-ph" data-k="${pk}" value="${esc(f[pk] || '')}" placeholder="Placeholder…" ${dis}>
         <label class="fbf-req"><input type="checkbox" data-k="required" ${f.required ? 'checked' : ''} ${dis}> Req.</label>
-        ${isAdmin ? '<button type="button" class="fbf-del" data-act="del" title="Eliminar">✕</button>' : ''}
-        ${f.type === 'select' ? `<div class="fbf-opts"><input class="fbf-in" data-k="${ok}" value="${esc((f[ok] || []).join(', '))}" placeholder="Opciones separadas por coma (${fbLang.toUpperCase()})" ${dis}></div>` : ''}
-      </div>`).join('') || '<p class="field-help">Sin campos. Agrega el primero.</p>';
+        ${isAdmin ? '<button type="button" class="fbf-del" data-act="del" title="Delete">✕</button>' : ''}
+        ${f.type === 'select' ? `<div class="fbf-opts"><input class="fbf-in" data-k="${ok}" value="${esc((f[ok] || []).join(', '))}" placeholder="Comma-separated options (${fbLang.toUpperCase()})" ${dis}></div>` : ''}
+      </div>`).join('') || '<p class="field-help">No fields. Add the first one.</p>';
   }
   renderFB();
   if (isAdmin) {
@@ -1112,12 +1112,12 @@ async function viewSettings() {
       const to = Number(row.dataset.i); if (to !== dragI) { fbSync(); const m = formState.splice(dragI, 1)[0]; formState.splice(to, 0, m); } dragI = null; renderFB();
     });
     $('#fb-list').addEventListener('dragend', () => { $('#fb-list').querySelectorAll('.fbf').forEach((x) => x.classList.remove('drag-over')); });
-    $('#fb-add').addEventListener('click', () => { fbSync(); formState.push({ key: 'campo_' + (formState.length + 1), type: 'text', required: false, label: 'Nuevo Campo', labelEs: 'Nuevo Campo' }); renderFB(); });
+    $('#fb-add').addEventListener('click', () => { fbSync(); formState.push({ key: 'campo_' + (formState.length + 1), type: 'text', required: false, label: 'New Field', labelEs: 'Nuevo Campo' }); renderFB(); });
     $('#fb-save').addEventListener('click', async () => {
       fbSync();
       const text = {}; TEXT_FIELDS.forEach(([k]) => { text[k + '_en'] = ($('#ft-' + k + '-en').value || '').trim(); text[k + '_es'] = ($('#ft-' + k + '-es').value || '').trim(); });
-      try { await api('PUT', '/api/settings', { form_config: JSON.stringify({ text, fields: formState }) }); toast('Formulario guardado'); }
-      catch (e) { toast(e.message === 'admin only' ? 'Solo administradores' : 'Error al guardar', 'err'); }
+      try { await api('PUT', '/api/settings', { form_config: JSON.stringify({ text, fields: formState }) }); toast('Form saved'); }
+      catch (e) { toast(e.message === 'admin only' ? 'Administrators only' : 'Error saving', 'err'); }
     });
   }
 }
@@ -1132,16 +1132,16 @@ async function viewStats(month) {
   const maxLoss = Math.max(1, ...s.lossBreakdown.map((l) => l.count));
   const funnelMax = Math.max(1, ...Object.values(s.funnel));
   const scoped = !!s.month;
-  const monthOpts = ['<option value="">Todos los meses</option>',
+  const monthOpts = ['<option value="">All months</option>',
     ...s.availableMonths.slice().reverse().map((m) => `<option value="${m}" ${m === s.month ? 'selected' : ''}>${fmtMonthLong(m)}</option>`)].join('');
   const kpis = scoped
-    ? [['accent', 'Leads del mes', s.kpi.total], ['green', 'Ganados', s.kpi.won], ['red', 'Perdidos', s.kpi.lost], ['brass', 'Tasa de cierre', s.kpi.winRate, '%'], ['', 'En proceso', s.kpi.active]]
-    : [['accent', 'Leads totales', s.kpi.total], ['', 'Nuevos este mes', s.kpi.newThisMonth], ['green', 'Ganados', s.kpi.won], ['brass', 'Tasa de cierre', s.kpi.winRate, '%'], ['', 'En proceso', s.kpi.active]];
+    ? [['accent', 'Leads this month', s.kpi.total], ['green', 'Won', s.kpi.won], ['red', 'Lost', s.kpi.lost], ['brass', 'Close rate', s.kpi.winRate, '%'], ['', 'In progress', s.kpi.active]]
+    : [['accent', 'Total leads', s.kpi.total], ['', 'New this month', s.kpi.newThisMonth], ['green', 'Won', s.kpi.won], ['brass', 'Close rate', s.kpi.winRate, '%'], ['', 'In progress', s.kpi.active]];
 
   v.innerHTML = `
     <div class="topbar">
-      <div><span class="ey">Análisis</span><h1>Conversiones por mes</h1></div>
-      <div class="tools"><label class="month-lab">Filtrar por mes</label><select id="stat-month" class="month-sel">${monthOpts}</select></div>
+      <div><span class="ey">Analysis</span><h1>Conversions by month</h1></div>
+      <div class="tools"><label class="month-lab">Filter by month</label><select id="stat-month" class="month-sel">${monthOpts}</select></div>
     </div>
 
     <div class="kpis">
@@ -1150,8 +1150,8 @@ async function viewStats(month) {
 
     <div class="stat-grid">
       <div class="card-box">
-        <h3>Evolución mensual</h3>
-        <p class="desc">Registrados vs. ganados vs. perdidos — últimos 6 meses.</p>
+        <h3>Monthly evolution</h3>
+        <p class="desc">Registered vs. won vs. lost — last 6 months.</p>
         <div class="chart">
           ${s.monthly.map((m) => `
             <div class="bar-group">
@@ -1164,15 +1164,15 @@ async function viewStats(month) {
             </div>`).join('')}
         </div>
         <div class="legend">
-          <span><i style="background:var(--accent)"></i>Registrados</span>
-          <span><i style="background:var(--green)"></i>Ganados</span>
-          <span><i style="background:var(--red)"></i>Perdidos</span>
+          <span><i style="background:var(--accent)"></i>Registered</span>
+          <span><i style="background:var(--green)"></i>Won</span>
+          <span><i style="background:var(--red)"></i>Lost</span>
         </div>
       </div>
 
       <div class="card-box">
-        <h3>Tasa de conversión</h3>
-        <p class="desc">% de ganados sobre resueltos (ganados + perdidos) por mes.</p>
+        <h3>Conversion rate</h3>
+        <p class="desc">% won of resolved (won + lost) per month.</p>
         ${s.monthly.map((m) => `
           <div class="conv-row">
             <span class="m">${fmtMonth(m.month)}</span>
@@ -1182,8 +1182,8 @@ async function viewStats(month) {
       </div>
 
       <div class="card-box">
-        <h3>${scoped ? 'Embudo del mes' : 'Embudo actual'}</h3>
-        <p class="desc">${scoped ? `Leads creados en ${fmtMonthLong(s.month)}, por estado.` : 'Distribución de todos los leads por estado.'}</p>
+        <h3>${scoped ? 'Funnel for the month' : 'Current funnel'}</h3>
+        <p class="desc">${scoped ? `Leads created in ${fmtMonthLong(s.month)}, by status.` : 'All leads by status.'}</p>
         <div class="funnel">
           ${Object.keys(STATUS_META).map((st) => `
             <div class="fn-row">
@@ -1194,14 +1194,14 @@ async function viewStats(month) {
       </div>
 
       <div class="card-box">
-        <h3>Motivos de pérdida</h3>
-        <p class="desc">Por qué se pierden los leads.</p>
+        <h3>Loss reasons</h3>
+        <p class="desc">Why leads are lost.</p>
         ${s.lossBreakdown.length ? s.lossBreakdown.map((l) => `
           <div class="loss-row">
             <span class="lab">${esc(l.label)}</span>
             <div class="loss-track"><div class="loss-fill" style="width:${(l.count / maxLoss) * 100}%"></div></div>
             <span class="n">${l.count}</span>
-          </div>`).join('') : '<p style="color:var(--mute);font-size:.82rem">Aún no hay leads perdidos.</p>'}
+          </div>`).join('') : '<p style="color:var(--mute);font-size:.82rem">No lost leads yet.</p>'}
       </div>
     </div>`;
 

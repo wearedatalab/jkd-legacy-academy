@@ -29,14 +29,14 @@ const ASSET_VER = (process.env.VERCEL_GIT_COMMIT_SHA || process.env.VERCEL_DEPLO
 // ---------------- Constants ----------------
 const STATUSES = ['registrado', 'contactado', 'sesion_free', 'ganado', 'perdido'];
 const LOSS_REASONS = {
-  no_responde: 'No responde',
-  fuera_zona: 'No vive en la zona de influencia',
-  sin_presupuesto: 'No tiene el presupuesto',
+  no_responde: 'No response',
+  fuera_zona: 'Outside the service area',
+  sin_presupuesto: 'No budget',
   spam: 'Spam',
-  buscaba_empleo: 'Buscaba empleo',
+  buscaba_empleo: 'Looking for a job',
 };
 const ROLES = ['admin', 'comercial'];
-const ROLE_LABELS = { admin: 'Administrador', comercial: 'Comercial' };
+const ROLE_LABELS = { admin: 'Administrator', comercial: 'Sales' };
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 // ---------------- Helpers ----------------
@@ -594,12 +594,12 @@ export async function handle(req, res) {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     if (method === 'OPTIONS') return send(res, 204, '');
     if (method === 'POST') {
-      if (!(await rateOk(`lead:${clientIp(req)}`, 20, 3600))) return json(res, 429, { error: 'Demasiadas solicitudes. Inténtalo más tarde.' });
+      if (!(await rateOk(`lead:${clientIp(req)}`, 20, 3600))) return json(res, 429, { error: 'Too many requests. Please try again later.' });
       const b = await readBody(req);
       // (Honeypot retirado: el navegador autocompletaba el campo oculto y descartaba leads reales.
       //  El anti-spam queda por rate-limit + validación; si hiciera falta, añadir un captcha real tipo Turnstile.)
       const email = cap(b.email, 160);
-      if (email && !EMAIL_RE.test(email)) return json(res, 400, { error: 'Correo inválido' });
+      if (email && !EMAIL_RE.test(email)) return json(res, 400, { error: 'Invalid email' });
       const t = nowISO();
       let attribution = null;
       if (b.attribution && typeof b.attribution === 'object') { const j = JSON.stringify(b.attribution); attribution = j.length > 2000 ? j.slice(0, 2000) : j; }
@@ -634,7 +634,7 @@ export async function handle(req, res) {
 
   // Auth (public) — rate-limited, respuesta neutra (sin enumeración, sin token en prod)
   if (p === '/api/auth/request' && method === 'POST') {
-    if (!(await rateOk(`auth:${clientIp(req)}`, 6, 900))) return json(res, 429, { error: 'Demasiados intentos. Espera unos minutos.' });
+    if (!(await rateOk(`auth:${clientIp(req)}`, 6, 900))) return json(res, 429, { error: 'Too many attempts. Please wait a few minutes.' });
     const b = await readBody(req);
     const r = await requestMagicLink(String(b.email || ''), baseUrl(req));
     return json(res, 200, { ok: true, ...(!IS_PROD && r.ok ? { devLink: r.link } : {}) });
@@ -658,7 +658,7 @@ export async function handle(req, res) {
     // (Vercel envía "Authorization: Bearer <CRON_SECRET>" cuando esa env var existe). También acepta ?key=.
     if (p === '/api/cron/task-reminders') {
       const secret = process.env.CRON_SECRET;
-      if (!secret) return json(res, 503, { error: 'CRON_SECRET no configurado' });
+      if (!secret) return json(res, 503, { error: 'CRON_SECRET not configured' });
       const auth = String(req.headers['authorization'] || '');
       const qkey = url.searchParams.get('key') || '';
       if (auth !== 'Bearer ' + secret && qkey !== secret) return json(res, 401, { error: 'unauthorized' });
@@ -780,9 +780,9 @@ export async function handle(req, res) {
     if (p === '/api/tasks' && method === 'POST') {
       const b = await readBody(req);
       const title = cap(b.title, 200);
-      if (!title) return json(res, 400, { error: 'título requerido' });
+      if (!title) return json(res, 400, { error: 'title required' });
       const leadId = b.lead_id ? Number(b.lead_id) : null;
-      if (leadId && !(await db.get('SELECT 1 FROM leads WHERE id=?', [leadId]))) return json(res, 400, { error: 'lead inválido' });
+      if (leadId && !(await db.get('SELECT 1 FROM leads WHERE id=?', [leadId]))) return json(res, 400, { error: 'invalid lead' });
       const d = b.due_at ? new Date(b.due_at) : null;
       const due = d && !isNaN(d.getTime()) ? d.toISOString() : null;
       const ownerId = b.owner_id ? Number(b.owner_id) : user.id;
@@ -801,7 +801,7 @@ export async function handle(req, res) {
       if (method === 'PATCH') {
         const b = await readBody(req);
         const sets = [], vals = [];
-        if ('title' in b) { const ti = cap(b.title, 200); if (!ti) return json(res, 400, { error: 'título requerido' }); sets.push('title=?'); vals.push(ti); }
+        if ('title' in b) { const ti = cap(b.title, 200); if (!ti) return json(res, 400, { error: 'title required' }); sets.push('title=?'); vals.push(ti); }
         if ('due_at' in b) { const d = b.due_at ? new Date(b.due_at) : null; sets.push('due_at=?'); vals.push(d && !isNaN(d.getTime()) ? d.toISOString() : null); }
         if ('owner_id' in b) { sets.push('owner_id=?'); vals.push(b.owner_id ? Number(b.owner_id) : null); }
         if ('status' in b) {
@@ -859,7 +859,7 @@ export async function handle(req, res) {
       if (user.role !== 'admin') return json(res, 403, { error: 'admin only' });
       const target = await db.get('SELECT * FROM users WHERE id=? AND active=1', [Number(impMatch[1])]);
       if (!target) return json(res, 404, { error: 'not found' });
-      if (target.id === user.id) return json(res, 400, { error: 'ya eres tú' });
+      if (target.id === user.id) return json(res, 400, { error: 'that is you' });
       const sess = await sessionRow(req);
       const adminId = sess && sess.impersonator_id ? sess.impersonator_id : user.id;
       const sid = token(24);
@@ -895,9 +895,9 @@ export async function handle(req, res) {
       const from = normFrom(b.from_path), to = normTo(b.to_path);
       const code = Number(b.code) === 302 ? 302 : 301;
       if (!from || !to) return json(res, 400, { error: 'from & to required' });
-      if (from === '/' || from.startsWith('/crm') || from.startsWith('/api')) return json(res, 400, { error: 'origen no permitido (no uses /, /crm o /api)' });
-      if (from === to) return json(res, 400, { error: 'el origen y el destino no pueden ser iguales' });
-      if (await db.get('SELECT id FROM redirects WHERE from_path=?', [from])) return json(res, 409, { error: 'ya existe una redirección para ese origen' });
+      if (from === '/' || from.startsWith('/crm') || from.startsWith('/api')) return json(res, 400, { error: 'source not allowed (do not use /, /crm or /api)' });
+      if (from === to) return json(res, 400, { error: 'source and target cannot be the same' });
+      if (await db.get('SELECT id FROM redirects WHERE from_path=?', [from])) return json(res, 409, { error: 'a redirect already exists for that source' });
       const r = await db.run('INSERT INTO redirects (from_path,to_path,code,active,hits,created_at) VALUES (?,?,?,1,0,?)', [from, to, code, nowISO()]);
       return json(res, 201, await db.get('SELECT * FROM redirects WHERE id=?', [r.lastInsertRowid]));
     }
@@ -911,11 +911,11 @@ export async function handle(req, res) {
         const sets = [], vals = [];
         if ('from_path' in b) {
           const from = normFrom(b.from_path);
-          if (!from || from === '/' || from.startsWith('/crm') || from.startsWith('/api')) return json(res, 400, { error: 'origen no permitido' });
-          if (await db.get('SELECT id FROM redirects WHERE from_path=? AND id<>?', [from, id])) return json(res, 409, { error: 'ya existe una redirección para ese origen' });
+          if (!from || from === '/' || from.startsWith('/crm') || from.startsWith('/api')) return json(res, 400, { error: 'source not allowed' });
+          if (await db.get('SELECT id FROM redirects WHERE from_path=? AND id<>?', [from, id])) return json(res, 409, { error: 'a redirect already exists for that source' });
           sets.push('from_path=?'); vals.push(from);
         }
-        if ('to_path' in b) { const to = normTo(b.to_path); if (!to) return json(res, 400, { error: 'destino requerido' }); sets.push('to_path=?'); vals.push(to); }
+        if ('to_path' in b) { const to = normTo(b.to_path); if (!to) return json(res, 400, { error: 'target required' }); sets.push('to_path=?'); vals.push(to); }
         if ('code' in b) { sets.push('code=?'); vals.push(Number(b.code) === 302 ? 302 : 301); }
         if ('active' in b) { sets.push('active=?'); vals.push(b.active ? 1 : 0); }
         if (sets.length) { vals.push(id); await db.run(`UPDATE redirects SET ${sets.join(',')} WHERE id=?`, vals); }
