@@ -420,6 +420,42 @@ async function verifyToken(t) {
   await db.run('INSERT INTO sessions (id,user_id,expires_at,created_at) VALUES (?,?,?,?)', [sid, row.user_id, addDays(new Date(), 7).toISOString(), nowISO()]);
   return sid;
 }
+// Interstitial del magic link: una página con un botón que hace POST para confirmar.
+// Un GET (incluido el de un escáner de enlaces del correo / prefetch) NO consume el token
+// —solo lo muestra—; el token se quema únicamente al confirmar con el POST, que los
+// escáneres no hacen. Además la cookie se setea en una navegación iniciada desde el propio
+// dominio, así que sobrevive al venir de un cliente de correo. El token llega ya validado como hex.
+function verifyLandingHtml(t) {
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Sign in · JKD Legacy</title>
+<style>
+  :root{color-scheme:dark}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0b0c10;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:24px}
+  .card{width:100%;max-width:420px;background:#14161c;border:1px solid #262a33;border-radius:16px;padding:34px 32px;text-align:center}
+  .brand{font-family:Georgia,serif;color:#f4f1ea;font-size:22px;font-weight:600;margin-bottom:4px}
+  .kicker{color:#837e72;font-size:11px;letter-spacing:.18em;text-transform:uppercase;margin-bottom:22px}
+  h1{color:#f4f1ea;font-size:19px;font-weight:600;margin:0 0 8px}
+  p{color:#c2bdb1;font-size:14.5px;line-height:1.6;margin:0 0 22px}
+  button{width:100%;border:0;cursor:pointer;background:#2f7be0;color:#fff;font-weight:600;font-size:15.5px;padding:14px 22px;border-radius:100px}
+  button:active{transform:translateY(1px)}
+  .fine{color:#5b5750;font-size:12px;margin:18px 0 0;line-height:1.5}
+</style></head>
+<body>
+  <div class="card">
+    <div class="brand">The JKD Legacy Academy</div>
+    <div class="kicker">Panel · Sign in</div>
+    <h1>Confirm your sign-in</h1>
+    <p>Click below to open the panel. This link works once and expires 15 minutes after it was sent.</p>
+    <form method="POST" action="/crm/auth/verify?token=${t}">
+      <button type="submit">Sign in to the panel →</button>
+    </form>
+    <p class="fine">If you did not request this, you can safely close this page.</p>
+  </div>
+</body></html>`;
+}
 
 // ---------------- Stats ----------------
 // Envía recordatorios por correo de las tareas pendientes que vencen dentro de 24 h o ya vencidas.
@@ -639,10 +675,19 @@ export async function handle(req, res) {
     const r = await requestMagicLink(String(b.email || ''), baseUrl(req));
     return json(res, 200, { ok: true, ...(!IS_PROD && r.ok ? { devLink: r.link } : {}) });
   }
+  // Magic-link landing. El GET muestra un interstitial y NO consume el token (así un
+  // escáner/prefetch del correo no lo quema). El POST del botón sí lo confirma.
   if (p === '/auth/verify' && method === 'GET') {
-    const sid = await verifyToken(url.searchParams.get('token') || '');
-    if (sid) res.setHeader('Set-Cookie', sidCookie(sid, 7));
-    res.writeHead(302, { Location: '/crm' });
+    const t = url.searchParams.get('token') || '';
+    if (!/^[a-f0-9]{8,64}$/i.test(t)) { res.writeHead(302, { Location: '/crm?e=link' }); return res.end(); }
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' });
+    return res.end(verifyLandingHtml(t));
+  }
+  if (p === '/auth/verify' && method === 'POST') {
+    const t = url.searchParams.get('token') || '';
+    const sid = /^[a-f0-9]{8,64}$/i.test(t) ? await verifyToken(t) : null;
+    if (sid) { res.setHeader('Set-Cookie', sidCookie(sid, 7)); res.writeHead(302, { Location: '/crm' }); return res.end(); }
+    res.writeHead(302, { Location: '/crm?e=link' });
     return res.end();
   }
   if (p === '/api/auth/logout' && method === 'POST') {

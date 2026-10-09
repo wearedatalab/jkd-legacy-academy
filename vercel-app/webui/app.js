@@ -60,6 +60,11 @@ function toast(msg, type = 'ok') {
 //  LOGIN
 // ============================================================
 function renderLogin() {
+  const errCode = new URLSearchParams(location.search).get('e') || '';
+  const alert = errCode === 'link'
+    ? '<div class="login-alert">That sign-in link was invalid, already used, or expired. Links work once and expire 15 minutes after they are sent — request a new one below.</div>'
+    : '';
+  if (errCode) { try { history.replaceState(null, '', location.pathname + location.hash); } catch (e) {} }
   root.innerHTML = `
   <div class="login-wrap">
     <div class="login-card">
@@ -69,6 +74,7 @@ function renderLogin() {
       </div>
       <h1>Panel access</h1>
       <p class="sub">Enter your email and we'll send you a magic link to sign in — no passwords.</p>
+      ${alert}
       <form id="login-form">
         <div class="field">
           <label>Email</label>
