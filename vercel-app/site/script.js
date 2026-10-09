@@ -85,7 +85,7 @@ if (!reduce && window.matchMedia('(pointer: fine)').matches) {
 }
 
 // ===== Smooth anchor offset =====
-document.querySelectorAll('a[href^="#"]').forEach(a => {
+document.querySelectorAll('a[href^="#"]:not([data-scroll-form])').forEach(a => {
   a.addEventListener('click', (e) => {
     const id = a.getAttribute('href');
     if (id.length > 1) {
@@ -248,8 +248,53 @@ if (fieldsHost) {
   document.querySelectorAll('.lang-toggle button').forEach((b) => b.addEventListener('click', () => setTimeout(renderWebForm, 0)));
 }
 
+// ===== Envío de leads (compartido): espera la respuesta del CRM y SOLO redirige si el lead se guardó =====
+const SUBMIT_TIMEOUT_MS = 8000;
+const ACADEMY_TEL = { href: 'tel:+61459785073', label: '0459 785 073' };
+async function postLead(payload) {
+  const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = setTimeout(() => { if (ctrl) ctrl.abort(); }, SUBMIT_TIMEOUT_MS);
+  try {
+    const r = await fetch(CRM_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: ctrl ? ctrl.signal : undefined });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json().catch(() => null);
+    if (!j || !j.ok) throw new Error('lead not saved');
+    return j;
+  } finally { clearTimeout(timer); }
+}
+// Teléfono en E.164 (+61459785073) para las conversiones avanzadas de Google Ads
+function toE164(cc, raw) {
+  const s = String(raw || '').trim();
+  if (!s) return '';
+  if (s[0] === '+') { const d = s.replace(/\D/g, ''); return d ? '+' + d : ''; }
+  if (s.slice(0, 2) === '00') { const d = s.slice(2).replace(/\D/g, ''); return d ? '+' + d : ''; }
+  const d = s.replace(/\D/g, '').replace(/^0+/, '');            // quita el 0 troncal
+  const c = String(cc || '+61').replace(/\D/g, '');
+  return d ? '+' + c + d : '';
+}
+// Guarda (solo en esta pestaña) correo y teléfono para enviarlos como user_data en /thanks; allí se borran.
+function rememberForConversion(email, phoneE164, from) {
+  try {
+    sessionStorage.setItem('jkd_ud', JSON.stringify({ email: String(email || '').trim().toLowerCase(), phone_number: phoneE164 || '' }));
+    if (from) sessionStorage.setItem('jkd_from', from); else sessionStorage.removeItem('jkd_from');
+  } catch (e) {}
+}
+const thanksUrl = (id) => (window.JKD_NO_BACKEND ? 'thanks.html' : '/thanks') + (id ? '?lid=' + encodeURIComponent(id) : '');
+function showFormError(formEl, msg) {
+  let box = formEl.querySelector('.form-error');
+  if (!msg) { if (box) box.hidden = true; return; }
+  if (!box) {
+    box = document.createElement('div');
+    box.className = 'form-error'; box.setAttribute('role', 'alert');
+    box.style.cssText = 'margin-top:14px;padding:12px 14px;border-radius:4px;background:rgba(196,64,47,.14);border:1px solid rgba(196,64,47,.5);color:#f3c3bb;font-size:.9rem;line-height:1.5';
+    formEl.appendChild(box);
+  }
+  box.innerHTML = escHtml(msg) + ` <a href="${ACADEMY_TEL.href}" style="color:#fff;text-decoration:underline;font-weight:600;white-space:nowrap">${ACADEMY_TEL.label}</a>.`;
+  box.hidden = false;
+}
+
 if (form) {
-  form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = form.querySelector('button[type=submit]');
     const lang = curLang();
@@ -271,8 +316,99 @@ if (form) {
       payload.phone = ccEl.value + ' ' + num;
     }
     payload.attribution = buildAttribution(lang);
-    if (btn) btn.disabled = true;
-    if (!window.JKD_NO_BACKEND) fetch(CRM_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), keepalive: true }).catch(() => {});
-    window.location.href = window.JKD_NO_BACKEND ? 'thanks.html' : '/thanks';
+    if (window.JKD_NO_BACKEND) { window.location.href = thanksUrl(); return; }   // demo estática sin CRM
+    const label = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.textContent = lang === 'es' ? 'Enviando…' : 'Sending…'; }
+    showFormError(form, '');
+    try {
+      const saved = await postLead(payload);
+      const phoneEl = document.getElementById('wf-phone');
+      rememberForConversion(payload.email, toE164(ccEl ? ccEl.value : '+61', phoneEl ? phoneEl.value : payload.phone), 'join');
+      window.location.href = thanksUrl(saved.id);
+    } catch (err) {
+      // No redirigir: el lead NO se guardó. Mostrar el teléfono y reactivar el botón.
+      if (btn) { btn.disabled = false; btn.innerHTML = label; }
+      showFormError(form, lang === 'es' ? 'No pudimos enviar tu solicitud. Inténtalo de nuevo o llámanos al' : "We couldn't send your request. Please try again or call us on");
+    }
   });
+}
+
+// ===== Landing de pauta /free-trial =====
+const trialForm = document.querySelector('#trial-form');
+if (trialForm) {
+  const $t = (id) => document.getElementById(id);
+  // Código de país: +61 ya viene en el HTML (funciona sin JS); aquí se agrega la lista completa
+  const ccSel = $t('ft-phone-cc');
+  if (ccSel) ccSel.innerHTML = PHONE_CODES.map(([iso, dial, name]) => `<option value="${dial}"${iso === 'AU' ? ' selected' : ''} title="${escHtml(name)}">${dial} ${iso}</option>`).join('');
+  const errBox = trialForm.querySelector('.ft-error');
+  const btn = trialForm.querySelector('.ft-submit');
+  const btnLabel = btn.innerHTML;
+
+  trialForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!trialForm.reportValidity()) return;
+    const name = $t('ft-name').value.trim().replace(/\s+/g, ' ');
+    const sp = name.indexOf(' ');
+    const cc = ccSel ? ccSel.value : '+61';
+    const rawPhone = $t('ft-phone').value.trim();
+    const email = $t('ft-email').value.trim();
+    const attribution = buildAttribution('en');
+    // El lead queda con la landing como origen (para separarlo en el CRM); el primer toque se conserva aparte.
+    if (attribution.landing_url && attribution.landing_url.indexOf('/free-trial') === -1) attribution.first_landing_url = attribution.landing_url;
+    attribution.landing_url = location.href;
+    attribution.form = 'free-trial';
+    const payload = {
+      source: 'free-trial',
+      first_name: sp > 0 ? name.slice(0, sp) : name,
+      last_name: sp > 0 ? name.slice(sp + 1) : '',
+      email,
+      phone: rawPhone[0] === '+' ? rawPhone : cc + ' ' + rawPhone.replace(/^0+/, ''),
+      location: $t('ft-loc').value,
+      experience: $t('ft-interest').value,
+      message: 'Free trial class request (landing /free-trial)',
+      attribution,
+    };
+    if (window.JKD_NO_BACKEND) { window.location.href = thanksUrl(); return; }
+    btn.disabled = true; btn.textContent = 'Sending…';
+    errBox.hidden = true;
+    try {
+      const saved = await postLead(payload);
+      rememberForConversion(email, toE164(cc, rawPhone), 'free-trial');
+      window.location.href = thanksUrl(saved.id);
+    } catch (err) {
+      btn.disabled = false; btn.innerHTML = btnLabel;
+      errBox.innerHTML = `We couldn't send your request. Please try again or call us on <a href="${ACADEMY_TEL.href}">${ACADEMY_TEL.label}</a>.`;
+      errBox.hidden = false;
+    }
+  });
+
+  // Botones "Book free class" → scroll al formulario (y un destello para ubicarlo)
+  document.querySelectorAll('[data-scroll-form]').forEach((a) => a.addEventListener('click', (e) => {
+    e.preventDefault();
+    const top = trialForm.getBoundingClientRect().top + window.scrollY - 14;
+    window.scrollTo({ top, behavior: reduce ? 'auto' : 'smooth' });
+    trialForm.classList.remove('flash'); void trialForm.offsetWidth; trialForm.classList.add('flash');
+  }));
+
+  // Barra fija móvil: visible solo cuando el formulario NO está en pantalla (nunca tapa el form)
+  const sticky = document.getElementById('ft-sticky');
+  if (sticky && 'IntersectionObserver' in window) {
+    let formVisible = true, pastHero = false;
+    const sync = () => sticky.classList.toggle('show', !formVisible && pastHero);
+    new IntersectionObserver(([en]) => { formVisible = en.isIntersecting; sync(); }, { threshold: 0.15 }).observe(trialForm);
+    const onScroll = () => { pastHero = window.scrollY > 140; sync(); };
+    window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
+  }
+}
+
+// ===== /thanks: copy específico cuando el lead viene de la clase gratuita =====
+if (/\/thanks(\.html)?$/.test(location.pathname)) {
+  let from = ''; try { from = sessionStorage.getItem('jkd_from') || ''; } catch (e) {}
+  if (from === 'free-trial') {
+    const set = (sel, html) => { const el = document.querySelector(sel); if (el) { el.removeAttribute('data-i18n'); el.removeAttribute('data-i18n-html'); el.innerHTML = html; } };
+    set('.thanks .eyebrow', 'Free class requested');
+    set('.thanks h1', 'You’re in.<br><span class="text-accent">We’ll call you soon</span>.');
+    set('.thanks p.lead', 'Thanks for booking your free Jeet Kune Do class. We’ll call you within 24 hours to find a class time that suits you.');
+    set('.thanks .note', 'Can’t wait? Call us on <a href="tel:+61459785073" style="color:var(--text)">0459 785 073</a>.');
+  }
 }

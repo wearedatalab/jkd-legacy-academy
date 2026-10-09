@@ -257,7 +257,9 @@ const MIGRATION_REDIRECTS = {
   '/category/uncategorized': '/',
 };
 // Páginas reales del sitio nuevo (para no redirigirlas por error y para el fallback de "primer segmento").
-const REAL_PAGES = ['legacy', 'the-way', 'join-the-family', 'thanks'];
+const REAL_PAGES = ['legacy', 'the-way', 'join-the-family', 'thanks', 'free-trial'];
+// Landings de pauta: solo en inglés y noindex → sin hreflang/og:locale alternativos.
+const EN_ONLY_PAGES = ['/free-trial'];
 // Destino de migración para CUALQUIER ruta vieja (incluye assets .js, rutas con // dobles,
 // /feed, /author, /category, /tag, archivos de fecha /2019/10/, wp-*, etc.). Devuelve null si no aplica.
 // Manda a una página ÚTIL del sitio nuevo; la basura de WordPress sin equivalente va al home.
@@ -367,8 +369,12 @@ async function injectHead(html, seo) {
   if (!/<meta\s+name=["']robots["']/i.test(html)) {
     head += '<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">';
   }
-  head += `<link rel="alternate" hreflang="en" href="${enUrl}"><link rel="alternate" hreflang="en-AU" href="${enUrl}"><link rel="alternate" hreflang="es" href="${esUrl}"><link rel="alternate" hreflang="x-default" href="${enUrl}">`;
-  head += `<meta property="og:url" content="${canon}"><meta property="og:locale" content="${isEs ? 'es_ES' : 'en_AU'}"><meta property="og:locale:alternate" content="${isEs ? 'en_AU' : 'es_ES'}">`;
+  if (EN_ONLY_PAGES.includes(seo.path)) {
+    head += `<meta property="og:url" content="${enUrl}"><meta property="og:locale" content="en_AU">`;
+  } else {
+    head += `<link rel="alternate" hreflang="en" href="${enUrl}"><link rel="alternate" hreflang="en-AU" href="${enUrl}"><link rel="alternate" hreflang="es" href="${esUrl}"><link rel="alternate" hreflang="x-default" href="${enUrl}">`;
+    head += `<meta property="og:url" content="${canon}"><meta property="og:locale" content="${isEs ? 'es_ES' : 'en_AU'}"><meta property="og:locale:alternate" content="${isEs ? 'en_AU' : 'es_ES'}">`;
+  }
   head += GEO_META + JSON_LD;
   const CRUMB_NAMES = { '/legacy': 'Legacy', '/the-way': 'The Way', '/join-the-family': 'Join the Family' };
   if (CRUMB_NAMES[seo.path]) {
