@@ -401,6 +401,21 @@ if (trialForm) {
   }
 }
 
+// ===== Imágenes diferidas (img[data-src]): se cargan al acercarse con el scroll. El loading="lazy" nativo
+// las bajaba igual en la carga inicial (umbral de ~1.250–2.500 px) y competían con el hero por el ancho de banda.
+(function () {
+  const imgs = document.querySelectorAll('img[data-src]');
+  if (!imgs.length) return;
+  const show = (img) => {
+    if (img.dataset.srcset) img.srcset = img.dataset.srcset;
+    img.src = img.dataset.src;
+    img.removeAttribute('data-src'); img.removeAttribute('data-srcset');
+  };
+  if (!('IntersectionObserver' in window)) { imgs.forEach(show); return; }
+  const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { io.unobserve(e.target); show(e.target); } }), { rootMargin: '500px 0px' });
+  imgs.forEach((img) => io.observe(img));
+})();
+
 // ===== Mapa diferido: el iframe de Google Maps (~400 KiB de JS) se inserta solo cuando la sección
 // está cerca de verse. El loading="lazy" nativo lo precargaba a ~2.500 px en redes lentas y hundía el LCP.
 document.querySelectorAll('.ft-map[data-map-src]').forEach((box) => {
