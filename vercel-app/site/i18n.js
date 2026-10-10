@@ -35,6 +35,7 @@ window.I18N = {
     'footer.melbourne': 'Melbourne · HQ',
     'footer.adelaide': 'Adelaide Kwoon',
     'footer.inquire': 'Inquire to Train',
+    'footer.privacy': 'Privacy Policy',
     'footer.copyright': '© <span data-year>2026</span> The JKD Legacy Academy · All rights reserved.',
     'footer.tagline': '"Under the sky, under the heavens, there is but one FAMILY."',
 
@@ -483,6 +484,7 @@ window.I18N = {
     'footer.melbourne': 'Melbourne · Sede Principal',
     'footer.adelaide': 'Kwoon Adelaide',
     'footer.inquire': 'Solicitar Entrenamiento',
+    'footer.privacy': 'Política de privacidad',
     'footer.copyright': '© <span data-year>2026</span> The JKD Legacy Academy · Todos los derechos reservados.',
     'footer.tagline': '"Bajo el cielo, bajo los cielos, hay una sola FAMILIA."',
 

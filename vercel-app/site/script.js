@@ -364,7 +364,7 @@ if (trialForm) {
       email,
       phone: rawPhone[0] === '+' ? rawPhone : cc + ' ' + rawPhone.replace(/^0+/, ''),
       location: $t('ft-loc').value,
-      experience: $t('ft-interest').value,
+      experience: $t('ft-experience').value,
       message: 'Free trial class request (landing /free-trial)',
       attribution,
     };

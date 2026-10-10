@@ -257,9 +257,9 @@ const MIGRATION_REDIRECTS = {
   '/category/uncategorized': '/',
 };
 // Páginas reales del sitio nuevo (para no redirigirlas por error y para el fallback de "primer segmento").
-const REAL_PAGES = ['legacy', 'the-way', 'join-the-family', 'thanks', 'free-trial'];
+const REAL_PAGES = ['legacy', 'the-way', 'join-the-family', 'thanks', 'free-trial', 'privacy'];
 // Landings de pauta: solo en inglés y noindex → sin hreflang/og:locale alternativos.
-const EN_ONLY_PAGES = ['/free-trial'];
+const EN_ONLY_PAGES = ['/free-trial', '/privacy'];
 // Destino de migración para CUALQUIER ruta vieja (incluye assets .js, rutas con // dobles,
 // /feed, /author, /category, /tag, archivos de fecha /2019/10/, wp-*, etc.). Devuelve null si no aplica.
 // Manda a una página ÚTIL del sitio nuevo; la basura de WordPress sin equivalente va al home.

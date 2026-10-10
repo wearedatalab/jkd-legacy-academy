@@ -43,14 +43,22 @@ if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentEleme
   .ft-call svg { width: 15px; height: 15px; color: var(--accent-2); flex-shrink: 0; }
 
   /* ---- Hero: titular + formulario visible sin scroll en móvil ---- */
-  .ft-hero { position: relative; padding: 76px 0 34px; isolation: isolate; }
+  .ft-hero { position: relative; padding: 68px 0 34px; isolation: isolate; }
   .ft-hero-bg { position: absolute; inset: 0 0 auto 0; height: 330px; z-index: -1; overflow: hidden; }
   .ft-hero-bg img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; opacity: .62; }
   .ft-hero-bg::after { content: ''; position: absolute; inset: 0;
     background: linear-gradient(180deg, rgba(11,12,16,.55) 0%, rgba(11,12,16,.35) 38%, rgba(11,12,16,.85) 72%, var(--ink) 88%); }
   .ft-hero-grid { display: grid; gap: 18px; }
   .ft-hero .eyebrow { font-size: .62rem; letter-spacing: .22em; color: var(--accent-2); }
-  .ft-hero h1 { font-size: clamp(2.05rem, 8.4vw, 4.6rem); line-height: 1.02; margin: 10px 0 10px; text-wrap: balance; }
+  /* Oferta destacada (coincide con los anuncios: «Free Trial Class») */
+  .ft-badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 13px 6px 11px; border-radius: 100px; background: var(--brass); color: #1a1407;
+    font-family: var(--mono); font-size: .68rem; letter-spacing: .16em; text-transform: uppercase; }
+  .ft-badge::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #1a1407; }
+  .ft-sched { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-family: var(--mono); font-size: .72rem; letter-spacing: .04em; color: var(--text-dim); }
+  .ft-sched-loc { display: none; }
+  .ft-sched svg { width: 14px; height: 14px; color: var(--brass); flex-shrink: 0; }
+  .ft-card-h { font-family: var(--serif); font-size: 1.32rem; line-height: 1.15; color: var(--text); margin: 0 0 10px; letter-spacing: -.01em; }
+  .ft-hero h1 { font-size: clamp(2.05rem, 8.4vw, 4.6rem); line-height: 1.02; margin: 8px 0 8px; text-wrap: balance; }
   .ft-hero h1 em { font-style: italic; font-weight: 400; color: var(--accent-2); }
   .ft-sub { font-size: 1.04rem; line-height: 1.45; color: var(--text); font-weight: 400; max-width: 34ch; }
   .ft-sub b { color: var(--brass); font-weight: 600; }
@@ -59,15 +67,17 @@ if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentEleme
   /* Tarjeta del formulario */
   .ft-card {
     position: relative; background: linear-gradient(170deg, var(--ink-3), var(--ink-2));
-    border: 1px solid var(--line-strong); border-radius: var(--radius-lg); padding: 18px 16px 16px;
+    border: 1px solid var(--line-strong); border-radius: var(--radius-lg); padding: 16px 16px 14px;
     box-shadow: 0 30px 60px -30px rgba(0,0,0,.8);
   }
   .ft-card::before { content: ''; position: absolute; top: -1px; left: 16px; right: 16px; height: 2px; background: linear-gradient(90deg, var(--accent), var(--brass)); }
   .ft-card.flash { animation: ftFlash 1.1s var(--e); }
   @keyframes ftFlash { 0% { box-shadow: 0 0 0 0 var(--accent-glow); } 60% { box-shadow: 0 0 0 10px rgba(47,123,224,0); } }
-  .ft-card .form-group { margin-bottom: 11px; }
-  .ft-card .form-group label { font-size: .58rem; margin-bottom: 5px; color: var(--text-dim); }
-  .ft-card .form-group label i { font-style: normal; color: var(--text-mute); letter-spacing: .08em; text-transform: none; }
+  .ft-card .form-group { margin-bottom: 10px; }
+  .ft-card .form-group label { font-size: .75rem; letter-spacing: .08em; margin-bottom: 5px; color: var(--text-dim); }   /* >=12 px en el celular */
+  .ft-card .form-group label i { font-style: normal; font-family: var(--sans); font-size: .72rem; color: var(--text-mute); letter-spacing: 0; text-transform: none; }
+  .ft-privacy { margin-top: 8px; font-size: .78rem; line-height: 1.45; color: var(--text-mute); text-align: center; }
+  .ft-privacy a { color: var(--text-dim); text-decoration: underline; text-underline-offset: 3px; }
   .ft-card .form-control { padding: 12px 13px; font-size: 16px; /* 16px evita el zoom de iOS */ border-radius: var(--radius); }
   .ft-card select.form-control { appearance: none; -webkit-appearance: none; padding-right: 30px;
     background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M1 1l4 4 4-4' fill='none' stroke='%23837e72' stroke-width='1.5'/></svg>");
@@ -76,7 +86,7 @@ if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentEleme
   .ft-phone { display: flex; }
   .ft-phone select { flex: 0 0 auto; width: 104px; padding-left: 11px !important; padding-right: 24px !important; background-position: right 8px center !important; border-top-right-radius: 0 !important; border-bottom-right-radius: 0 !important; border-right: none !important; }
   .ft-phone input { flex: 1 1 auto; min-width: 0; border-top-left-radius: 0 !important; border-bottom-left-radius: 0 !important; }
-  .ft-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .ft-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: end; }  /* selectores alineados aunque una etiqueta ocupe 2 líneas */
   /* Azul profundo en los CTA: blanco sobre #2f7be0 no llega a AA con texto pequeño (igual que el botón flotante del sitio) */
   .ft-wrap .btn-primary, .ft-sticky-book { background: var(--accent-deep); }
   .ft-wrap .btn-primary:hover, .ft-sticky-book:hover { background: #16459a; }
@@ -126,7 +136,17 @@ if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentEleme
   .ft-steps p { font-size: .95rem; line-height: 1.55; }
 
   /* Horarios y sedes (paper) */
-  .ft-locs { display: grid; gap: 18px; }
+  .ft-locs { display: grid; gap: 14px; max-width: 720px; margin: 0 auto; }
+  .ft-loc-alt { font-size: .95rem; color: var(--text-dim); padding: 14px 18px; border: 1px dashed var(--line-strong); border-radius: var(--radius-lg); }
+  .ft-loc-alt .ft-loc-tag { display: block; margin-bottom: 4px; }
+  .ft-loc-alt a { color: var(--accent-deep); font-family: var(--mono); font-size: .82rem; white-space: nowrap; }
+  /* Bloque Wing Chun / Kung Fu */
+  .ft-wc-sec { padding-bottom: 0; }
+  .ft-wc { max-width: 760px; margin: 0 auto; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 14px;
+    padding: 34px 22px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: radial-gradient(ellipse 80% 90% at 50% 0%, var(--accent-soft), transparent 70%), var(--ink-2); }
+  .ft-wc h2 { font-size: clamp(1.8rem, 5.6vw, 2.8rem); }
+  .ft-wc p { max-width: 54ch; font-size: 1.02rem; line-height: 1.65; color: var(--text-dim); }
+  .ft-wc .btn { border-radius: 100px; margin-top: 4px; }
   .ft-loc { background: rgba(255,255,255,.62); border: 1px solid var(--line-strong); border-radius: var(--radius-lg); overflow: hidden; }
   .ft-loc-body { padding: 20px 18px 22px; }
   .ft-loc-tag { font-family: var(--mono); font-size: .6rem; letter-spacing: .2em; text-transform: uppercase; color: var(--accent-deep); }
@@ -189,6 +209,7 @@ if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentEleme
     .ft-hero-bg::after { background: linear-gradient(90deg, var(--ink) 0%, rgba(11,12,16,.82) 38%, rgba(11,12,16,.45) 70%, rgba(11,12,16,.65) 100%), linear-gradient(180deg, transparent 70%, var(--ink)); }
     .ft-hero-grid { grid-template-columns: minmax(0, 1.15fr) minmax(360px, 430px); gap: 56px; align-items: center; }
     .ft-sub { font-size: 1.3rem; }
+    .ft-sched-loc { display: inline; }
     .ft-proof { display: flex; flex-wrap: wrap; gap: 10px 22px; list-style: none; margin-top: 30px; font-family: var(--mono); font-size: .68rem; letter-spacing: .12em; text-transform: uppercase; color: var(--text-dim); }
     .ft-proof li { display: inline-flex; align-items: center; gap: 9px; }
     .ft-proof li::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--brass); }
@@ -199,7 +220,6 @@ if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentEleme
     .ft-ins { grid-template-columns: 380px 1fr; gap: 72px; }
     .ft-steps { grid-template-columns: repeat(3, 1fr); gap: 20px; }
     .ft-steps li { grid-template-columns: 1fr; padding: 26px; }
-    .ft-locs { grid-template-columns: 1.25fr 1fr; align-items: start; }
     .ft-close .actions { flex-direction: row; justify-content: center; }
     .ft-foot { padding-bottom: 32px; }
     .ft-sticky { display: none; }
@@ -235,9 +255,10 @@ if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentEleme
   </picture>
   <div class="container ft-hero-grid">
     <div class="ft-hero-copy">
-      <span class="eyebrow">Free trial class · Maidstone VIC</span>
+      <span class="ft-badge">Free trial class</span>
       <h1>Train Bruce Lee's <em>Jeet&nbsp;Kune&nbsp;Do</em> in Melbourne</h1>
       <p class="ft-sub">Your first class is <b>free</b>. Adults, all levels welcome.</p>
+      <p class="ft-sched"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Tue &amp; Thu 7 pm · Sat 9:30 am<span class="ft-sched-loc"> · Maidstone</span></p>
       <ul class="ft-proof">
         <li>Direct Bruce Lee lineage</li>
         <li>Small adult classes</li>
@@ -245,7 +266,8 @@ if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentEleme
       </ul>
     </div>
 
-    <form id="trial-form" class="ft-card" autocomplete="on" aria-label="Book your free class">
+    <form id="trial-form" class="ft-card" autocomplete="on" aria-labelledby="ft-card-h">
+      <h2 class="ft-card-h" id="ft-card-h">Book your free trial class</h2>
       <div class="form-group">
         <label for="ft-name">Name</label>
         <input class="form-control" id="ft-name" name="name" type="text" autocomplete="name" placeholder="Your full name" required>
@@ -271,18 +293,18 @@ if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentEleme
           </select>
         </div>
         <div class="form-group">
-          <label for="ft-interest">Interest <i>(optional)</i></label>
-          <select class="form-control" id="ft-interest" name="interest">
+          <label for="ft-experience">Experience <i>(optional)</i></label>
+          <select class="form-control" id="ft-experience" name="experience">
             <option value="">Select…</option>
-            <option value="Foundation">Foundation</option>
-            <option value="Progression">Progression</option>
-            <option value="Mastery">Mastery</option>
-            <option value="Not sure yet">Not sure yet</option>
+            <option value="None">None</option>
+            <option value="Some">Some</option>
+            <option value="A lot">A lot</option>
           </select>
         </div>
       </div>
       <button type="submit" class="btn btn-primary ft-submit">Book my free class <span class="btn-arrow">→</span></button>
       <p class="ft-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>We'll call you within 24 hours to book your class.</p>
+      <p class="ft-privacy">We only use your details to book your free class. <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a></p>
       <div class="ft-error" role="alert" hidden></div>
     </form>
   </div>
@@ -297,26 +319,26 @@ if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentEleme
     </div>
     <div class="ft-benefits">
       <article class="ft-b">
-        <img data-src="images/ft-lineage-640.webp" data-srcset="images/ft-lineage-400.webp 400w, images/ft-lineage-640.webp 640w, images/ft-lineage.webp 720w" sizes="(min-width: 900px) 380px, calc(100vw - 56px)" alt="Ink illustration of a wooden training dummy with a golden lineage thread" width="720" height="540" decoding="async">
+        <img data-src="images/ft-photo-lineage-640.webp" data-srcset="images/ft-photo-lineage-400.webp 400w, images/ft-photo-lineage-640.webp 640w, images/ft-photo-lineage.webp 720w" sizes="(min-width: 900px) 380px, calc(100vw - 56px)" alt="Sigung Richard Bustillo, a direct student of Bruce Lee" width="720" height="540" decoding="async">
         <div class="ft-b-body">
           <span class="ft-b-num">01 · Lineage</span>
-          <h3>Direct from Bruce Lee</h3>
+          <h3>Bruce Lee's art, direct lineage</h3>
           <p>Your instructor was certified by two of Bruce Lee's own students. You learn Jeet Kune Do as it was handed down, not a watered-down version.</p>
         </div>
       </article>
       <article class="ft-b">
-        <img data-src="images/ft-small-group-640.webp" data-srcset="images/ft-small-group-400.webp 400w, images/ft-small-group-640.webp 640w, images/ft-small-group.webp 720w" sizes="(min-width: 900px) 380px, calc(100vw - 56px)" alt="Ink illustration of a small group of adults training" width="720" height="540" decoding="async">
+        <img data-src="images/ft-photo-group-640.webp" data-srcset="images/ft-photo-group-400.webp 400w, images/ft-photo-group-640.webp 640w, images/ft-photo-group.webp 720w" sizes="(min-width: 900px) 380px, calc(100vw - 56px)" alt="Adults training together in a Jeet Kune Do class at JKD Legacy Academy, Maidstone" width="720" height="540" decoding="async">
         <div class="ft-b-body">
-          <span class="ft-b-num">02 · Adults only</span>
-          <h3>Small adult classes</h3>
+          <span class="ft-b-num">02 · Adults, all levels</span>
+          <h3>Small classes, all levels</h3>
           <p>Classes are for adults of every fitness level and kept small, so you get personal corrections in every session.</p>
         </div>
       </article>
       <article class="ft-b">
-        <img data-src="images/ft-self-defence-640.webp" data-srcset="images/ft-self-defence-400.webp 400w, images/ft-self-defence-640.webp 640w, images/ft-self-defence.webp 720w" sizes="(min-width: 900px) 380px, calc(100vw - 56px)" alt="Ink illustration of two forearms meeting in an intercepting block" width="720" height="540" decoding="async">
+        <img data-src="images/ft-photo-correction-640.webp" data-srcset="images/ft-photo-correction-400.webp 400w, images/ft-photo-correction-640.webp 640w, images/ft-photo-correction.webp 720w" sizes="(min-width: 900px) 380px, calc(100vw - 56px)" alt="Focus-mitt training with an instructor at JKD Legacy Academy" width="720" height="540" decoding="async">
         <div class="ft-b-body">
           <span class="ft-b-num">03 · Practical</span>
-          <h3>Self-defence that works</h3>
+          <h3>Practical self-defence</h3>
           <p>Jeet Kune Do is simple, direct and efficient. You start building skills you can actually use from your first class.</p>
         </div>
       </article>
@@ -341,6 +363,18 @@ if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentEleme
         <li><small>2nd generation</small>Ricardo Vargas</li>
         <li class="you"><small>Next</small>You</li>
       </ol>
+    </div>
+  </div>
+</section>
+
+<!-- WING CHUN / KUNG FU — texto a validar con Sigung Vargas -->
+<section class="ft-sec ft-wc-sec" aria-labelledby="ft-wc">
+  <div class="container">
+    <div class="ft-wc" data-confirm="text to validate with Sigung Vargas">
+      <span class="eyebrow">Wing Chun · Kung Fu · Martial arts</span>
+      <h2 id="ft-wc">Coming from Wing Chun or Kung Fu?</h2>
+      <p>Bruce Lee trained in Wing Chun before he created Jeet Kune Do. If you come from Wing Chun, Kung Fu or another style, your first class shows you what JKD adds.</p>
+      <a href="#trial-form" class="btn btn-ghost" data-scroll-form>Try a free class <span class="btn-arrow">→</span></a>
     </div>
   </div>
 </section>
@@ -377,24 +411,14 @@ if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentEleme
           <span class="ft-loc-tag">Melbourne · Headquarters</span>
           <h3>Maidstone</h3>
           <address>Unit 6 / 72-80 Hampstead Rd, Maidstone VIC 3012</address>
-          <ul class="ft-times" data-confirm="class days & times">
+          <ul class="ft-times">
             <li><span>Tuesday &amp; Thursday</span><span>7:00 PM</span></li>
             <li><span>Saturday</span><span>9:30 AM</span></li>
           </ul>
           <a class="ft-tel" href="tel:+61459785073"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>0459 785 073</a>
         </div>
       </article>
-      <article class="ft-loc">
-        <div class="ft-loc-body">
-          <span class="ft-loc-tag">South Australia · Adelaide Kwoon</span>
-          <h3>Adelaide</h3>
-          <address>Led by Sifu Peter Pitrakkos</address>
-          <ul class="ft-times" data-confirm="Adelaide days & times">
-            <li><span>Class times</span><span>Call to book</span></li>
-          </ul>
-          <a class="ft-tel" href="tel:+61411268793"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>0411 268 793</a>
-        </div>
-      </article>
+      <p class="ft-loc-alt"><span class="ft-loc-tag">Also in South Australia</span>Adelaide Kwoon · led by Sifu Peter Pitrakkos · <a href="tel:+61411268793">0411 268 793</a></p>
     </div>
   </div>
 </section>
@@ -407,6 +431,10 @@ if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentEleme
       <h2 id="ft-faq">Before your first class.</h2>
     </div>
     <div class="faq-list">
+      <details class="faq-item" open>
+        <summary>Is the first class really free?</summary>
+        <div class="faq-a"><p>Yes, your first class is free. Leave your details and we will call you within 24 hours to book a class time that suits you.</p></div>
+      </details>
       <details class="faq-item">
         <summary>Do I need any martial arts experience?</summary>
         <div class="faq-a"><p>No. Many students start with no background at all. Your first class is adapted to your level, and the instructor corrects you personally.</p></div>
@@ -437,10 +465,10 @@ if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentEleme
 
 <!-- CIERRE -->
 <section class="ft-close" aria-labelledby="ft-close-h">
-  <img data-src="images/ft-close.webp" alt="" width="1200" height="600" decoding="async">
+  <img data-src="images/ft-close-ink.webp" alt="" width="1024" height="768" decoding="async">
   <div class="container">
     <span class="eyebrow">Free trial class</span>
-    <h2 id="ft-close-h">Your first class<br>is on us.</h2>
+    <h2 id="ft-close-h">Your first class<br>is free.</h2>
     <p>Adults, all levels welcome. Maidstone &amp; Adelaide.</p>
     <div class="actions">
       <a href="#trial-form" class="btn btn-primary" data-scroll-form>Book my free class <span class="btn-arrow">→</span></a>
@@ -454,7 +482,7 @@ if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentEleme
 <footer class="ft-foot">
   <div class="container">
     © <span data-year>2026</span> The JKD Legacy Academy<br>
-    Unit 6 / 72-80 Hampstead Rd, Maidstone VIC 3012 · <a href="tel:+61459785073">0459 785 073</a>
+    Unit 6 / 72-80 Hampstead Rd, Maidstone VIC 3012 · <a href="tel:+61459785073">0459 785 073</a> · <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>
   </div>
 </footer>
 
