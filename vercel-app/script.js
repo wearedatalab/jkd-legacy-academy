@@ -401,6 +401,21 @@ if (trialForm) {
   }
 }
 
+// ===== Mapa diferido: el iframe de Google Maps (~400 KiB de JS) se inserta solo cuando la sección
+// está cerca de verse. El loading="lazy" nativo lo precargaba a ~2.500 px en redes lentas y hundía el LCP.
+document.querySelectorAll('.ft-map[data-map-src]').forEach((box) => {
+  const load = () => {
+    if (box.dataset.loaded) return; box.dataset.loaded = '1';
+    const f = document.createElement('iframe');
+    f.src = box.dataset.mapSrc; f.title = box.getAttribute('aria-label') || 'Map';
+    f.referrerPolicy = 'no-referrer-when-downgrade'; f.setAttribute('allowfullscreen', '');
+    box.appendChild(f); box.removeAttribute('role');
+  };
+  if (!('IntersectionObserver' in window)) return load();
+  const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); load(); } }, { rootMargin: '300px 0px' });
+  io.observe(box);
+});
+
 // ===== /thanks: copy específico cuando el lead viene de la clase gratuita =====
 if (/\/thanks(\.html)?$/.test(location.pathname)) {
   let from = ''; try { from = sessionStorage.getItem('jkd_from') || ''; } catch (e) {}

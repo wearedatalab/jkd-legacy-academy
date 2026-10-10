@@ -12,12 +12,13 @@
 <link rel="canonical" href="https://jkdlegacy.com.au/free-trial">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..600&family=Inter:wght@300..600&family=Space+Mono:wght@400;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..600&family=Inter:wght@300..600&family=Space+Mono:wght@400;700&display=swap"></noscript>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..540;1,9..144,400&family=Inter:wght@300..600&family=Space+Mono:wght@400&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..540;1,9..144,400&family=Inter:wght@300..600&family=Space+Mono:wght@400&display=swap"></noscript>
 <link rel="preload" as="image" href="images/ft-hero-m.webp" media="(max-width: 899px)" fetchpriority="high">
 <link rel="preload" as="image" href="images/ft-hero-d.webp" media="(min-width: 900px)" fetchpriority="high">
-<link rel="stylesheet" href="styles.css">
-<link rel="icon" type="image/png" href="images/favicon.png">
+<!-- Subconjunto de styles.css que usa esta landing (purgado + minificado), en línea: sin CSS que bloquee el render -->
+<style id="base">:root{--ink:#0b0c10;--ink-2:#101218;--ink-3:#171a22;--bone:#f3eee2;--bone-2:#e9e1cf;--bone-3:#ded3bb;--text:#f4f1ea;--text-dim:#c2bdb1;--text-mute:#837e72;--surface:rgba(255,255,255,0.035);--surface-2:rgba(255,255,255,0.06);--line:rgba(244,241,234,0.12);--line-soft:rgba(244,241,234,0.07);--line-strong:rgba(244,241,234,0.22);--accent:#2f7be0;--accent-2:#5fa0f0;--accent-deep:#1f5bbf;--accent-soft:rgba(47,123,224,0.14);--accent-glow:rgba(47,123,224,0.45);--brass:#c8a96a;--brass-soft:rgba(200,169,106,0.16);--seal:#c4402f;--container:1240px;--measure:1080px;--radius:4px;--radius-lg:6px;--serif:'Fraunces', Georgia, 'Times New Roman', serif;--sans:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;--mono:'Space Mono', 'SFMono-Regular', Menlo, monospace;--e:cubic-bezier(.22,1,.36,1);--t-fast:220ms var(--e);--t:460ms var(--e);--t-slow:900ms var(--e)}*{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}body{font-family:var(--sans);background:var(--ink);color:var(--text-dim);line-height:1.65;font-size:16px;overflow-x:hidden}body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:9000;opacity:.045;mix-blend-mode:overlay;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}img{max-width:100%;display:block}a{color:inherit;text-decoration:none;transition:color var(--t-fast)}::selection{background:var(--accent);color:#fff}h1,h2,h3{font-family:var(--serif);font-optical-sizing:auto;color:var(--text);font-weight:540;line-height:1.02;letter-spacing:-.018em}h1{font-size:clamp(3rem,8.5vw,7.2rem)}h2{font-size:clamp(2.3rem,5vw,4.2rem)}h3{font-size:clamp(1.5rem,2.6vw,2.2rem)}p{color:var(--text-dim)}.eyebrow{display:inline-flex;align-items:center;gap:.7rem;font-family:var(--mono);font-size:.7rem;font-weight:400;letter-spacing:.28em;text-transform:uppercase;color:var(--accent)}.eyebrow::before{content:"";width:26px;height:1px;background:currentColor;opacity:.7}.lead{font-size:clamp(1.05rem,1.5vw,1.28rem);line-height:1.6;color:var(--text-dim);max-width:56ch;font-weight:300}.container{width:100%;max-width:var(--container);margin:0 auto;padding:0 28px}.paper{background:var(--bone);--text:#14151a;--text-dim:#4a4738;--text-mute:#8a8470;--line:rgba(20,21,26,0.13);--line-soft:rgba(20,21,26,0.08);--line-strong:rgba(20,21,26,0.26);--surface:rgba(20,21,26,0.035);--surface-2:rgba(20,21,26,0.06);color:var(--text-dim)}.paper h1,.paper h2,.paper h3{color:#14151a}.btn{display:inline-flex;align-items:center;gap:11px;padding:15px 30px;font-family:var(--mono);font-size:.72rem;font-weight:400;letter-spacing:.16em;text-transform:uppercase;cursor:pointer;border:1px solid transparent;border-radius:100px;transition:all var(--t);position:relative;overflow:hidden}.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent-deep);transform:translateY(-2px);box-shadow:0 16px 40px -12px var(--accent-glow);color:#fff}.btn-ghost{background:0 0;color:var(--text);border-color:var(--line-strong)}.btn-ghost:hover{border-color:var(--accent);color:var(--text);background:var(--surface-2)}.btn-arrow{display:inline-grid;place-items:center;transition:transform var(--t-fast)}.btn:hover .btn-arrow{transform:translateX(5px)}.section{padding:clamp(48px,7vw,92px)0;position:relative}[id].section,section[id]{scroll-margin-top:92px}.paper+.paper,.section:not(.paper)+.section:not(.paper){padding-top:0}.times{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:860px;margin:0 auto}@media (max-width:680px){.times{grid-template-columns:1fr}}.plan .btn{width:100%;justify-content:center}.instructor{display:grid;grid-template-columns:.9fr 1.1fr;gap:clamp(40px,6vw,80px);align-items:center}@media (max-width:880px){.instructor{grid-template-columns:1fr;gap:40px}}.form-group{margin-bottom:20px}.form-group label{display:block;font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--text-mute);margin-bottom:8px}.form-control{width:100%;padding:14px 16px;background:rgba(0,0,0,.25);border:1px solid var(--line-strong);border-radius:var(--radius);color:var(--text);font-family:var(--sans);font-size:.95rem;transition:var(--t-fast)}.form-control:focus{outline:0;border-color:var(--accent);background:rgba(0,0,0,.4);box-shadow:0 0 0 4px var(--accent-soft)}.form-control::placeholder{color:var(--text-mute)}.paper .form-control{background:rgba(255,255,255,.66);border-color:var(--line-strong)}.paper .form-control:focus{background:#fff}textarea.form-control{min-height:128px;resize:vertical}.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media (max-width:720px){.form-row{grid-template-columns:1fr}}.locations{display:grid;gap:18px}.location{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);padding:30px;position:relative;overflow:hidden;transition:all var(--t)}.location::before{content:"";position:absolute;left:0;top:0;width:3px;height:100%;background:var(--accent);transform:scaleY(0);transform-origin:top;transition:transform var(--t)}.location:hover{border-color:var(--line-strong)}.location:hover::before{transform:scaleY(1)}.faq-list,.footer{border-top:1px solid var(--line)}.footer{background:var(--ink-2);padding:84px 0 30px}.footer h2{font-family:var(--mono);font-size:.64rem;font-weight:400;letter-spacing:.2em;color:var(--text);text-transform:uppercase;margin-bottom:20px;line-height:1.2}.footer ul{list-style:none}.footer li{margin-bottom:11px}.footer a{color:var(--text-dim);font-size:.9rem}.faq-item summary:hover,.footer a:hover{color:var(--accent)}.float-cta .btn-arrow{display:inline-grid;place-items:center;transition:transform var(--t-fast)}.float-cta:hover .btn-arrow{transform:translateX(4px)}.faq-list{max-width:840px;margin:0 auto}.faq-item{border-bottom:1px solid var(--line)}.faq-item summary{list-style:none;cursor:pointer;padding:22px 48px 22px 0;position:relative;font-family:var(--serif);font-size:clamp(1.1rem,1.7vw,1.34rem);color:var(--text);line-height:1.32;transition:color var(--t-fast)}.faq-item summary::-webkit-details-marker{display:none}.faq-item summary::after{content:"+";position:absolute;right:4px;top:22px;line-height:1;font-family:var(--mono);font-size:1.5rem;font-weight:400;color:var(--accent);transition:transform var(--t-fast)}.faq-item[open] summary::after{content:"–"}.faq-a{padding:0 48px 26px 0}.faq-a p{font-size:1rem;line-height:1.72;color:var(--text-dim);max-width:72ch}@media (prefers-reduced-motion:reduce){*,::after,::before{animation:none!important;transition:none!important}}</style>
+<link rel="icon" type="image/png" sizes="48x48" href="images/favicon-48.png">
 <script>/* Modo revisión (solo local): resalta los datos que la academia debe confirmar antes de publicar */
 if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentElement.classList.add('review');</script>
 <style>
@@ -132,9 +133,16 @@ if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentEleme
   .ft-times { list-style: none; margin: 16px 0 16px; border-top: 1px solid var(--line); }
   .ft-times li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: .95rem; color: var(--text); }
   .ft-times li span:last-child { font-family: var(--mono); font-size: .82rem; color: var(--text-dim); }
-  .ft-loc .ft-tel { display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: .82rem; color: var(--accent-deep); font-weight: 700; }
+  .ft-loc .ft-tel { display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: .82rem; color: var(--accent-deep); font-weight: 400; letter-spacing: .02em; }
   .ft-loc .ft-tel svg { width: 15px; height: 15px; }
-  .ft-map { display: block; width: 100%; aspect-ratio: 16 / 10; border: 0; background: #d9d0bb; filter: grayscale(.25) contrast(1.02); }
+  .ft-map { position: relative; display: block; width: 100%; aspect-ratio: 16 / 10; overflow: hidden; background-color: #e3dac6;
+    background-image: linear-gradient(rgba(20,21,26,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(20,21,26,.06) 1px, transparent 1px),
+      linear-gradient(28deg, transparent 46%, rgba(255,255,255,.75) 46%, rgba(255,255,255,.75) 50%, transparent 50%);
+    background-size: 26px 26px, 26px 26px, 100% 100%; }
+  .ft-map iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; filter: grayscale(.25) contrast(1.02); }
+  .ft-map-ph { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    color: var(--accent-deep); font-family: var(--mono); font-size: .62rem; letter-spacing: .16em; text-transform: uppercase; }
+  .ft-map-ph svg { width: 34px; height: 34px; filter: drop-shadow(0 4px 6px rgba(0,0,0,.18)); }
 
   /* FAQ */
   .ft-faq .faq-item summary { font-size: 1.12rem; padding: 18px 40px 18px 0; }
@@ -207,7 +215,7 @@ if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentEleme
 
 <header class="ft-head">
   <div class="container ft-head-in">
-    <img src="images/logo-horizontal.webp" alt="The JKD Legacy Academy" class="ft-logo" width="350" height="107">
+    <img src="images/logo-horizontal-200.webp" srcset="images/logo-horizontal-200.webp 200w, images/logo-horizontal.webp 350w" sizes="(min-width: 900px) 125px, 98px" alt="The JKD Legacy Academy" class="ft-logo" width="200" height="61">
     <a class="ft-call" href="tel:+61459785073" aria-label="Call 0459 785 073">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
       <span>0459 785 073</span>
@@ -221,7 +229,7 @@ if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentEleme
 <section class="ft-hero" id="top">
   <picture class="ft-hero-bg">
     <source media="(min-width: 900px)" srcset="images/ft-hero-d.webp" width="1600" height="800">
-    <img src="images/ft-hero-m.webp" alt="" width="800" height="800" fetchpriority="high" decoding="async">
+    <img src="images/ft-hero-m.webp" alt="" width="640" height="640" fetchpriority="high">
   </picture>
   <div class="container ft-hero-grid">
     <div class="ft-hero-copy">
@@ -287,7 +295,7 @@ if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentEleme
     </div>
     <div class="ft-benefits">
       <article class="ft-b">
-        <img src="images/ft-lineage.webp" alt="Ink illustration of a wooden training dummy with a golden lineage thread" width="720" height="540" loading="lazy" decoding="async">
+        <img src="images/ft-lineage-640.webp" srcset="images/ft-lineage-400.webp 400w, images/ft-lineage-640.webp 640w, images/ft-lineage.webp 720w" sizes="(min-width: 900px) 380px, calc(100vw - 56px)" alt="Ink illustration of a wooden training dummy with a golden lineage thread" width="720" height="540" loading="lazy" decoding="async">
         <div class="ft-b-body">
           <span class="ft-b-num">01 · Lineage</span>
           <h3>Direct from Bruce Lee</h3>
@@ -295,7 +303,7 @@ if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentEleme
         </div>
       </article>
       <article class="ft-b">
-        <img src="images/ft-small-group.webp" alt="Ink illustration of a small group of adults training" width="720" height="540" loading="lazy" decoding="async">
+        <img src="images/ft-small-group-640.webp" srcset="images/ft-small-group-400.webp 400w, images/ft-small-group-640.webp 640w, images/ft-small-group.webp 720w" sizes="(min-width: 900px) 380px, calc(100vw - 56px)" alt="Ink illustration of a small group of adults training" width="720" height="540" loading="lazy" decoding="async">
         <div class="ft-b-body">
           <span class="ft-b-num">02 · Adults only</span>
           <h3>Small adult classes</h3>
@@ -303,7 +311,7 @@ if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentEleme
         </div>
       </article>
       <article class="ft-b">
-        <img src="images/ft-self-defence.webp" alt="Ink illustration of two forearms meeting in an intercepting block" width="720" height="540" loading="lazy" decoding="async">
+        <img src="images/ft-self-defence-640.webp" srcset="images/ft-self-defence-400.webp 400w, images/ft-self-defence-640.webp 640w, images/ft-self-defence.webp 720w" sizes="(min-width: 900px) 380px, calc(100vw - 56px)" alt="Ink illustration of two forearms meeting in an intercepting block" width="720" height="540" loading="lazy" decoding="async">
         <div class="ft-b-body">
           <span class="ft-b-num">03 · Practical</span>
           <h3>Self-defence that works</h3>
@@ -318,7 +326,7 @@ if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentEleme
 <section class="ft-sec paper" aria-labelledby="ft-ins">
   <div class="container ft-ins">
     <figure>
-      <img src="images/vargas-bridge.webp" alt="Sigung Ricardo Vargas, head instructor of The JKD Legacy Academy" width="900" height="1089" loading="lazy" decoding="async">
+      <img src="images/vargas-bridge-640.webp" srcset="images/vargas-bridge-400.webp 400w, images/vargas-bridge-640.webp 640w, images/vargas-bridge.webp 900w" sizes="(min-width: 900px) 380px, min(380px, calc(100vw - 56px))" alt="Sigung Ricardo Vargas, head instructor of The JKD Legacy Academy" width="900" height="1089" loading="lazy" decoding="async">
     </figure>
     <div>
       <span class="eyebrow">Your instructor</span>
@@ -359,8 +367,10 @@ if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentEleme
     </div>
     <div class="ft-locs">
       <article class="ft-loc">
-        <iframe class="ft-map" title="Map: Unit 6/72-80 Hampstead Rd, Maidstone VIC 3012" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
-          src="https://www.google.com/maps?q=Unit+6%2F72-80+Hampstead+Rd%2C+Maidstone+VIC+3012&amp;z=15&amp;hl=en&amp;output=embed"></iframe>
+        <div class="ft-map" role="img" aria-label="Map: Unit 6/72-80 Hampstead Rd, Maidstone VIC 3012"
+          data-map-src="https://www.google.com/maps?q=Unit+6%2F72-80+Hampstead+Rd%2C+Maidstone+VIC+3012&amp;z=15&amp;hl=en&amp;output=embed">
+          <span class="ft-map-ph" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg><span>Hampstead Rd · Maidstone</span></span>
+        </div>
         <div class="ft-loc-body">
           <span class="ft-loc-tag">Melbourne · Headquarters</span>
           <h3>Maidstone</h3>
