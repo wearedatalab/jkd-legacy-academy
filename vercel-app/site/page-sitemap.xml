@@ -59,4 +59,8 @@
     <image:image><image:loc>https://jkdlegacy.com.au/images/training-1.jpg</image:loc></image:image>
     <image:image><image:loc>https://jkdlegacy.com.au/images/vargas-bridge.jpg</image:loc></image:image>
   </url>
+  <url>
+    <loc>https://jkdlegacy.com.au/privacy</loc>
+    <lastmod>2026-10-10T09:00:00+10:00</lastmod>
+  </url>
 </urlset>

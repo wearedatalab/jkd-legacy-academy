@@ -2,14 +2,12 @@
 # Dominio: jkdlegacy.com.au (cámbialo si publicas en otro)
 
 # --- Todos los buscadores ---
+# /thanks y /404 NO se bloquean aquí: son noindex y Google debe poder rastrearlas para verlo
+# (si se bloquean, quedan URLs viejas «indexadas aunque robots.txt las bloquea»).
 User-agent: *
 Allow: /
 Disallow: /crm
 Disallow: /crm/
-Disallow: /thanks
-Disallow: /thanks.html
-Disallow: /404
-Disallow: /404.html
 
 # --- Motores de IA / respuestas generativas: BIENVENIDOS a rastrear, indexar y citar ---
 # OpenAI (ChatGPT), Anthropic (Claude), Perplexity, Google Gemini, Apple, Amazon,
@@ -39,10 +37,6 @@ User-agent: cohere-ai
 Allow: /
 Disallow: /crm
 Disallow: /crm/
-Disallow: /thanks
-Disallow: /thanks.html
-Disallow: /404
-Disallow: /404.html
 
 # Resumen legible por LLMs: https://jkdlegacy.com.au/llms.txt
 Sitemap: https://jkdlegacy.com.au/sitemap.xml

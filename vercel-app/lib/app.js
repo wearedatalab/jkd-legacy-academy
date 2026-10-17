@@ -253,6 +253,7 @@ const MIGRATION_REDIRECTS = {
   '/the-philosophy': '/the-way',
   '/book-now': '/join-the-family',
   '/contact-us': '/join-the-family',
+  '/join-the-tribe': '/join-the-family',        // página vieja «Join the Tribe» (Search Console: 404)
   '/services': '/the-way',
   '/category/uncategorized': '/',
 };
