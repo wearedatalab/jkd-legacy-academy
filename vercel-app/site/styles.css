@@ -274,8 +274,8 @@ body.nav-open { overflow: hidden; }
   border: 1px solid transparent; border-radius: 100px; transition: all var(--t);
   position: relative; overflow: hidden;
 }
-.btn-primary { background: var(--accent); color: #fff; }
-.btn-primary:hover { background: var(--accent-deep); transform: translateY(-2px); box-shadow: 0 16px 40px -12px var(--accent-glow); color: #fff; }
+.btn-primary { background: var(--accent-deep); color: #fff; }   /* AA: blanco sobre #2f7be0 no llega a 4.5:1 con el texto pequeño del botón */
+.btn-primary:hover { background: #16459a; transform: translateY(-2px); box-shadow: 0 16px 40px -12px var(--accent-glow); color: #fff; }
 .btn-ghost { background: transparent; color: var(--text); border-color: var(--line-strong); }
 .btn-ghost:hover { border-color: var(--accent); color: var(--text); background: var(--surface-2); }
 .btn-arrow { display: inline-grid; place-items: center; transition: transform var(--t-fast); }

@@ -1,3 +1,31 @@
+// ===== i18n diferido: el diccionario EN/ES (~73 KB) solo se descarga si hace falta español =====
+// El HTML ya viene en inglés (sincronizado con el diccionario EN), así que en inglés no hace falta cargarlo.
+(function () {
+  const toggles = document.querySelectorAll('.lang-toggle button');
+  if (!toggles.length) return;                  // páginas solo en inglés (p. ej. /free-trial)
+  const ver = (document.currentScript && document.currentScript.src.split('?')[1]) || '';
+  let loading = null;
+  const load = () => loading || (loading = new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'i18n.js' + (ver ? '?' + ver : ''); s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  }));
+  let want = null;
+  try {
+    const u = new URLSearchParams(location.search).get('lang');
+    want = (u === 'es' || u === 'en') ? u : localStorage.getItem('jkd-lang');
+    if (u === 'en') localStorage.setItem('jkd-lang', 'en');
+  } catch (e) {}
+  if (want === 'es') load();
+  else toggles.forEach((b) => b.classList.toggle('active', b.dataset.lang === 'en'));
+  toggles.forEach((b) => b.addEventListener('click', () => {
+    if (window.setLang) return;                 // diccionario ya cargado: lo maneja i18n.js
+    const lang = b.dataset.lang;
+    if (lang !== 'es') { try { localStorage.setItem('jkd-lang', 'en'); } catch (e) {} return; }
+    load().then(() => { if (window.setLang) { window.setLang(lang); document.dispatchEvent(new Event('jkd:lang')); } });
+  }));
+})();
+
 // ===== Nav scroll state =====
 const nav = document.querySelector('.nav');
 const navToggle = document.querySelector('.nav-toggle');
@@ -245,7 +273,7 @@ async function renderWebForm() {
 if (fieldsHost) {
   renderWebForm();
   // Re-render labels/options al cambiar de idioma
-  document.querySelectorAll('.lang-toggle button').forEach((b) => b.addEventListener('click', () => setTimeout(renderWebForm, 0)));
+  document.addEventListener('jkd:lang', renderWebForm);   // tras cambiar de idioma (i18n.js se carga diferido)
 }
 
 // ===== Envío de leads (compartido): espera la respuesta del CRM y SOLO redirige si el lead se guardó =====

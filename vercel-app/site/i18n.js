@@ -216,8 +216,8 @@ window.I18N = {
     'way.path.1.sub': '12-Week Beginner Program',
     'way.path.1.p': 'The starting point. A focused 12-week curriculum covering the philosophical and physical fundamentals every JKD practitioner must internalise before progressing.',
     'way.path.1.li1': 'The Philosophy of Interception',
-    'way.path.1.li2': 'Core Guard &amp; Stance Structure',
-    'way.path.1.li3': 'Footwork &amp; Mobility',
+    'way.path.1.li2': 'Core Guard & Stance Structure',
+    'way.path.1.li3': 'Footwork & Mobility',
     'way.path.1.li4': 'Striking Fundamentals',
     'way.path.1.li5': 'Kicking Fundamentals',
     'way.path.1.li6': 'Trapping Hands · Introduction',
@@ -228,7 +228,7 @@ window.I18N = {
     'way.path.2.p': 'Where the art deepens. Drawing from Jun Fan Kickboxing, the wooden dummy, grappling, and the five ways of attack, you begin to apply principle to pressure under live, dynamic conditions.',
     'way.path.2.li1': 'Jun Fan Kickboxing',
     'way.path.2.li2': 'Wooden Dummy (Mook Jong)',
-    'way.path.2.li3': 'Grappling &amp; Clinch Work',
+    'way.path.2.li3': 'Grappling & Clinch Work',
     'way.path.2.li4': 'The Five Ways of Attack',
     'way.path.2.li5': 'Energy Drills (Chi Sao)',
     'way.path.2.li6': 'Sparring Methodologies',
@@ -240,7 +240,7 @@ window.I18N = {
     'way.path.3.li1': 'Personalised Curriculum Design',
     'way.path.3.li2': 'Self-Expression Through Combat',
     'way.path.3.li3': 'Philosophical Mentorship',
-    'way.path.3.li4': 'Teaching &amp; Lineage Preparation',
+    'way.path.3.li4': 'Teaching & Lineage Preparation',
     'way.path.3.li5': 'Lifelong Mentor Relationship',
 
     'way.method.eyebrow': 'The Method',
@@ -269,7 +269,7 @@ window.I18N = {
     'way.cta.btn': 'Inquire Now',
 
     // ----- JOIN -----
-    'join.title': 'Join The Family — Train at JKD Legacy Academy · Melbourne &amp; Adelaide',
+    'join.title': 'Join The Family — Train at JKD Legacy Academy · Melbourne & Adelaide',
     'join.header.eyebrow': 'Join The Family',
     'join.header.h1': 'Under One<br><span class="text-accent">Sky</span>. One Family.',
     'join.header.lead': '"Under the sky, under the heavens, there is but one family." Bruce Lee\'s words shape every interaction in the Kwoon. Admission begins with a private conversation — not a sign-up form.',
@@ -291,7 +291,7 @@ window.I18N = {
     'join.how.3.sub': 'Begin your foundation',
     'join.how.3.p': "If the fit is right on both sides, you'll be invited to begin the 12-week Foundation. Your journey into the lineage starts here.",
 
-    'join.locations.eyebrow': 'Locations &amp; Inquiry',
+    'join.locations.eyebrow': 'Locations & Inquiry',
     'join.locations.h2': 'Where We Train.<br>How to Reach Us.',
     'join.locations.p': 'Two academies. One lineage. Both led by direct students of the JKD tradition.',
 
@@ -956,10 +956,12 @@ function setLang(lang) {
   const valid = urlLang && window.I18N[urlLang] ? urlLang : null;
   const lang = valid || saved || 'en';
   if (valid) localStorage.setItem('jkd-lang', valid);
-  document.addEventListener('DOMContentLoaded', () => {
+  // Se carga diferido desde script.js (solo si hace falta español): puede llegar después de DOMContentLoaded.
+  const run = () => {
     applyI18n(lang);
     document.querySelectorAll('.lang-toggle button').forEach(btn => {
-      btn.addEventListener('click', () => setLang(btn.dataset.lang));
+      btn.addEventListener('click', () => { setLang(btn.dataset.lang); document.dispatchEvent(new Event('jkd:lang')); });
     });
-  });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run); else run();
 })();
