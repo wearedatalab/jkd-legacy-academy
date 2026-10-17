@@ -4,7 +4,7 @@
      Configuración del sitio → componentes externos.
    Este script lee /api/public/site-config e inicializa solo lo configurado.
 
-   - Páginas normales: la carga se difiere (1ª interacción o 4 s tras el load) para no
+   - Páginas normales: la carga se difiere (1ª interacción o 10 s tras el load) para no
      penalizar LCP/TBT.
    - /thanks: SIN retraso. Dispara generate_lead con transaction_id = id del lead (?lid=),
      envía user_data (correo + teléfono E.164) para conversiones avanzadas y Meta Lead con
@@ -47,7 +47,8 @@
   } else {
     // Diferir la analítica fuera de la carga crítica (mejor LCP/TBT).
     ['pointerdown', 'keydown', 'touchstart', 'scroll'].forEach(function (ev) { addEventListener(ev, go, { once: true, passive: true }); });
-    var later = function () { setTimeout(go, 4000); };
+    // Respaldo a los 10 s para visitas sin interacción (antes 4 s: caía dentro de la medición de PageSpeed y sumaba ~460 ms de TBT).
+    var later = function () { setTimeout(go, 10000); };
     if (document.readyState === 'complete') later(); else addEventListener('load', later);
   }
 

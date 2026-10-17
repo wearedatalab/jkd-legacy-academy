@@ -910,15 +910,15 @@ function applyI18n(lang) {
 
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
-    if (dict[key] !== undefined) el.textContent = dict[key];
+    if (dict[key] !== undefined && el.textContent !== dict[key]) el.textContent = dict[key];
   });
   document.querySelectorAll('[data-i18n-html]').forEach(el => {
     const key = el.getAttribute('data-i18n-html');
-    if (dict[key] !== undefined) el.innerHTML = dict[key];
+    if (dict[key] !== undefined && el.innerHTML !== dict[key]) el.innerHTML = dict[key];
   });
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
     const key = el.getAttribute('data-i18n-placeholder');
-    if (dict[key] !== undefined) el.placeholder = dict[key];
+    if (dict[key] !== undefined && el.placeholder !== dict[key]) el.placeholder = dict[key];
   });
   document.querySelectorAll('[data-i18n-title]').forEach(el => {
     const key = el.getAttribute('data-i18n-title');
@@ -927,7 +927,7 @@ function applyI18n(lang) {
   // Traduce el atributo "content" (meta description, Open Graph, Twitter)
   document.querySelectorAll('[data-i18n-content]').forEach(el => {
     const key = el.getAttribute('data-i18n-content');
-    if (dict[key] !== undefined) el.setAttribute('content', dict[key]);
+    if (dict[key] !== undefined && el.getAttribute('content') !== dict[key]) el.setAttribute('content', dict[key]);
   });
 
   // re-apply year token after innerHTML overwrites
