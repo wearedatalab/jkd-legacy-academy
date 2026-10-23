@@ -363,7 +363,7 @@ body.nav-open { overflow: hidden; }
 /* ===================== SECTIONS ===================== */
 .section { padding: clamp(48px, 7vw, 92px) 0; position: relative; }
 /* Compensa el nav fijo al saltar a un ancla (#inquire desde otra página) */
-section[id], [id].section { scroll-margin-top: 92px; }
+section[id], [id].section, #contact-form { scroll-margin-top: 92px; }   /* #contact-form: los botones de inscripción saltan directo al formulario */
 .section-sm { padding: clamp(38px, 5vw, 64px) 0; }
 /* Dos secciones del MISMO color seguidas: no sumar dos rellenos (hueco doble) */
 .paper + .paper, .section:not(.paper) + .section:not(.paper) { padding-top: 0; }
@@ -775,3 +775,11 @@ textarea.form-control { min-height: 128px; resize: vertical; }
 .text-center { text-align: center; }
 .mt-0 { margin-top: 0; } .mb-0 { margin-bottom: 0; }
 .grad-fade-top { background: linear-gradient(180deg, var(--ink), transparent); }
+
+/* ===================== CONVERSIÓN: enlace a la clase gratis + errores del formulario ===================== */
+.hero-trial-link { display: inline-block; margin-top: 16px; font-size: .95rem; color: var(--text-dim); text-decoration: underline;
+  text-decoration-color: var(--accent); text-underline-offset: 5px; text-decoration-thickness: 1px; transition: color var(--t-fast); }
+.hero-trial-link:hover { color: var(--text); }
+.field-error { margin-top: 7px; font-size: .84rem; line-height: 1.45; color: #e8907f; }
+.paper .field-error { color: #a8321f; }
+.form-control[aria-invalid="true"] { border-color: #c4402f; box-shadow: 0 0 0 3px rgba(196,64,47,.16); }

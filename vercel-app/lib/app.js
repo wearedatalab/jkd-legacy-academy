@@ -175,20 +175,24 @@ async function seed() {
 
 const DEFAULT_FORM = {
   text: {
-    eyebrow_en: 'Inquire to Train', eyebrow_es: 'Solicita Entrenar',
-    heading_en: 'Begin the Conversation.', heading_es: 'Empieza la Conversación.',
-    intro_en: 'Submit the form and Sigung Vargas (or the Adelaide head instructor) will reach out personally to schedule a private call.',
-    intro_es: 'Envía el formulario y el Sigung Vargas (o el instructor principal de Adelaide) te contactará personalmente para agendar una llamada privada.',
-    submit_en: 'Submit Inquiry', submit_es: 'Enviar Solicitud',
-    privacy_en: 'Your inquiry is private. We do not share your information.',
-    privacy_es: 'Tu solicitud es privada. No compartimos tu información.',
+    eyebrow_en: "Your First Class Is Free",
+    eyebrow_es: "Tu primera clase es gratis",
+    heading_en: "Begin the Conversation.",
+    heading_es: "Empieza la Conversación.",
+    intro_en: "Leave your details and Sigung Vargas (or the Adelaide head instructor) will call you within 24 hours to book your free class and answer your questions.",
+    intro_es: "Déjanos tus datos y el Sigung Vargas (o el instructor principal de Adelaide) te llamará en menos de 24 horas para agendar tu clase gratis y resolver tus dudas.",
+    submit_en: "Book My Free Class",
+    submit_es: "Reservar mi clase gratis",
+    privacy_en: "No payment, no commitment. We never share your details.",
+    privacy_es: "Sin pago ni compromiso. Nunca compartimos tus datos.",
   },
   fields: [
     { key: 'name', type: 'text', required: true, label: 'Name', labelEs: 'Nombre' },
     { key: 'email', type: 'email', required: true, label: 'Email', labelEs: 'Correo electrónico' },
     { key: 'phone', type: 'tel', required: true, label: 'Phone', labelEs: 'Teléfono' },
-    { key: 'path', type: 'select', required: true, label: 'Which path interests you?', labelEs: '¿Qué camino te interesa?',
-      options: ['Foundation', 'Progression', 'Mastery', 'Not sure'], optionsEs: ['Base', 'Progresión', 'Maestría', 'Inseguro'] },
+    // Opcional y con «Not sure yet» primero (preseleccionado): el nivel frenaba a los principiantes
+    { key: 'path', type: 'select', required: false, label: "Which path interests you? (optional)", labelEs: "¿Qué camino te interesa? (opcional)",
+      options: ["Not sure yet", "Foundation", "Progression", "Mastery"], optionsEs: ["Aún no lo sé", "Base", "Progresión", "Maestría"] },
   ],
 };
 const DEFAULT_SETTINGS = {
@@ -210,6 +214,21 @@ async function ensureSettings() {
       obj.text = DEFAULT_FORM.text;
       await db.run("UPDATE settings SET value=?, updated_at=? WHERE key='form_config'", [JSON.stringify(obj), nowISO()]);
     }
+    // Migración única (oct-2026, «más registros»): el formulario pasa a ofrecer la clase gratis y el nivel es
+    // opcional. Solo se aplica si la configuración guardada sigue con los textos de fábrica anteriores, así que
+    // nunca pisa lo que un admin haya editado a mano desde el CRM.
+    let changed = false;
+    if (obj && obj.text && obj.text.eyebrow_en === 'Inquire to Train' && obj.text.submit_en === 'Submit Inquiry') {
+      for (const k of ['eyebrow_en', 'eyebrow_es', 'intro_en', 'intro_es', 'submit_en', 'submit_es', 'privacy_en', 'privacy_es']) obj.text[k] = DEFAULT_FORM.text[k];
+      changed = true;
+    }
+    const path = obj && Array.isArray(obj.fields) ? obj.fields.find((f) => f.key === 'path') : null;
+    const defPath = DEFAULT_FORM.fields.find((f) => f.key === 'path');
+    if (path && path.required && Array.isArray(path.options) && path.options.includes('Not sure')) {
+      Object.assign(path, { required: false, label: defPath.label, labelEs: defPath.labelEs, options: defPath.options, optionsEs: defPath.optionsEs });
+      changed = true;
+    }
+    if (changed) await db.run("UPDATE settings SET value=?, updated_at=? WHERE key='form_config'", [JSON.stringify(obj), nowISO()]);
   } catch (e) { /* noop */ }
 }
 async function getAllSettings() {

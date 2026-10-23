@@ -577,7 +577,7 @@ function attrHTML(lead) {
     row('Campaign', a.utm_campaign), row('Source', a.utm_source), row('Medium', a.utm_medium),
     row('Term', a.utm_term), row('Content', a.utm_content),
     row('Google Click ID', a.gclid), row('Meta Click ID', a.fbclid), row('Microsoft Click ID', a.msclkid), row('TikTok Click ID', a.ttclid),
-    row('Referrer', a.referrer, true), row('Landing URL', a.landing_url, true), row('Submit URL', a.submit_url, true),
+    row('Form', a.form_id), row('Referrer', a.referrer, true), row('Landing URL', a.landing_url, true), row('Submit URL', a.submit_url, true),
     row('Device', a.device), row('Language', a.language), row('First seen', a.first_seen ? fmtDateTime(a.first_seen) : ''),
   ].join('');
   return `

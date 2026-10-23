@@ -57,7 +57,11 @@ if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentEleme
   .ft-sched { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-family: var(--mono); font-size: .72rem; letter-spacing: .04em; color: var(--text-dim); }
   .ft-sched-loc { display: none; }
   .ft-sched svg { width: 14px; height: 14px; color: var(--brass); flex-shrink: 0; }
-  .ft-card-h { font-family: var(--serif); font-size: 1.32rem; line-height: 1.15; color: var(--text); margin: 0 0 10px; letter-spacing: -.01em; }
+  .ft-card-h { font-family: var(--serif); font-size: 1.32rem; line-height: 1.15; color: var(--text); margin: 0 0 4px; letter-spacing: -.01em; }
+  .ft-rating { display: flex; align-items: center; gap: 5px; margin: 0 0 10px; font-size: .8rem; color: var(--text-dim); }
+  .ft-rating svg { width: 13px; height: 13px; fill: var(--brass); flex-shrink: 0; }
+  .ft-rating b { color: var(--text); font-weight: 600; }
+  .ft-rating a { color: var(--text-dim); text-decoration: underline; text-underline-offset: 3px; }
   .ft-hero h1 { font-size: clamp(2.05rem, 8.4vw, 4.6rem); line-height: 1.02; margin: 8px 0 8px; text-wrap: balance; }
   .ft-hero h1 em { font-style: italic; font-weight: 400; color: var(--accent-2); }
   .ft-sub { font-size: 1.04rem; line-height: 1.45; color: var(--text); font-weight: 400; max-width: 34ch; }
@@ -268,6 +272,8 @@ if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentEleme
 
     <form id="trial-form" class="ft-card" autocomplete="on" aria-labelledby="ft-card-h">
       <h2 class="ft-card-h" id="ft-card-h">Book your free trial class</h2>
+      <!-- Calificación real de Facebook (4.8 · 16 opiniones, oct-2026): verificar y actualizar cuando cambie -->
+      <p class="ft-rating"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.5 1.3 6.6L12 17.3l-5.9 3.2 1.3-6.6-4.9-4.5 6.6-.8z"/></svg><b>4.8</b> · <a href="https://www.facebook.com/RicardoVargasJeetKuneDo/reviews" target="_blank" rel="noopener">16 reviews on Facebook</a></p>
       <div class="form-group">
         <label for="ft-name">Name</label>
         <input class="form-control" id="ft-name" name="name" type="text" autocomplete="name" placeholder="Your full name" required>
@@ -303,7 +309,7 @@ if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) document.documentEleme
         </div>
       </div>
       <button type="submit" class="btn btn-primary ft-submit">Book my free class <span class="btn-arrow">→</span></button>
-      <p class="ft-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>We'll call you within 24 hours to book your class.</p>
+      <p class="ft-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>We'll call you within 24 hours to book your class. No payment, no commitment.</p>
       <p class="ft-privacy">We only use your details to book your free class. <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a></p>
       <div class="ft-error" role="alert" hidden></div>
     </form>

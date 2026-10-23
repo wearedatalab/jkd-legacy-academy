@@ -26,6 +26,34 @@
   }));
 })();
 
+// ===== Medición GA4: cta_click, form_start, form_submit, form_error =====
+// analytics.js expone window.jkdTrackImpl. Mientras no esté listo, el evento se guarda en la misma cola
+// (sessionStorage) que analytics.js envía apenas cargan las etiquetas, también si la página cambia.
+function jkdTrack(name, params) {
+  if (typeof window.jkdTrackImpl === 'function') return window.jkdTrackImpl(name, params);
+  try {
+    const q = JSON.parse(sessionStorage.getItem('jkd_evq') || '[]') || [];
+    q.push([name, params || {}]); sessionStorage.setItem('jkd_evq', JSON.stringify(q.slice(-30)));
+  } catch (e) {}
+}
+// Botones de inscripción marcados con data-cta="nav|hero|float|footer|join_top|home_band"
+document.addEventListener('click', (e) => {
+  const a = e.target && e.target.closest ? e.target.closest('a[data-cta]') : null;
+  if (!a) return;
+  jkdTrack('cta_click', { cta_text: (a.textContent || '').replace(/→/g, '').replace(/\s+/g, ' ').trim().slice(0, 80), cta_location: a.dataset.cta, link_url: a.href });
+}, true);
+// Primera vez que la persona escribe o elige algo en un formulario (una vez por carga de página)
+const fieldName = (id) => String(id || '').replace(/^(wf|ft)-/, '').replace(/-cc$/, '');
+function trackFormStart(formEl, formId) {
+  if (!formEl) return;
+  let done = false;
+  const h = (e) => {
+    if (done || !e.target || !e.target.id) return;
+    done = true; jkdTrack('form_start', { form_id: formId, first_field: fieldName(e.target.id) });
+  };
+  formEl.addEventListener('input', h, true); formEl.addEventListener('change', h, true);
+}
+
 // ===== Nav scroll state =====
 const nav = document.querySelector('.nav');
 const navToggle = document.querySelector('.nav-toggle');
@@ -130,11 +158,15 @@ document.querySelectorAll('a[href^="#"]:not([data-scroll-form])').forEach(a => {
 // ===== Year =====
 document.querySelectorAll('[data-year]').forEach(el => el.textContent = new Date().getFullYear());
 
-// ===== Floating register CTA: SIEMPRE visible (solo se oculta con el menú móvil abierto) =====
+// ===== Botón flotante «Book Your Free Class» → /free-trial =====
+// Se oculta con el menú móvil abierto, en /free-trial y /thanks (sobra) y mientras el formulario de
+// /join-the-family está en pantalla (en el celular taparía el botón de enviar).
 const floatCta = document.querySelector('.float-cta');
+const FLOAT_OFF_PAGE = /^\/(free-trial|thanks)(\.html)?\/?$/.test(location.pathname);
+let formOnScreen = false;
 function updateFloat() {
   if (!floatCta) return;
-  floatCta.classList.toggle('show', !document.body.classList.contains('nav-open'));
+  floatCta.classList.toggle('show', !FLOAT_OFF_PAGE && !formOnScreen && !document.body.classList.contains('nav-open'));
 }
 updateFloat();
 
@@ -145,10 +177,12 @@ const form = document.querySelector('#contact-form');
 const fieldsHost = document.querySelector('#form-fields');
 
 const escHtml = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// Misma regla que la página (i18n): ?lang= > elección guardada > inglés. Antes caía al idioma del navegador y,
+// con el navegador en español, la página salía en inglés pero el formulario en español («Enviar Solicitud»).
 const curLang = () => {
   const u = new URLSearchParams(location.search).get('lang');
-  const l = u || localStorage.getItem('jkd-lang') || (navigator.language || 'en');
-  return l.toLowerCase().startsWith('es') ? 'es' : 'en';
+  let saved = null; try { saved = localStorage.getItem('jkd-lang'); } catch (e) {}
+  return ((u === 'es' || u === 'en') ? u : (saved || 'en')) === 'es' ? 'es' : 'en';
 };
 // Mapea claves conocidas a columnas del lead; el resto va al mensaje
 const LEAD_MAP = { name: 'first_name', first: 'first_name', first_name: 'first_name', last: 'last_name', last_name: 'last_name', email: 'email', phone: 'phone', location: 'location', experience: 'experience', message: 'message' };
@@ -204,20 +238,20 @@ function buildAttribution(lang) {
 // Formulario por defecto si el backend del CRM no está disponible (demo estática / fallback)
 const FALLBACK_FORM = {
   fields: [
-    { key: 'name', label: 'Full Name', labelEs: 'Nombre completo', type: 'text', placeholder: 'Your name', placeholderEs: 'Tu nombre', required: true },
-    { key: 'email', label: 'Email', labelEs: 'Correo electrónico', type: 'email', placeholder: 'you@email.com', placeholderEs: 'tu@correo.com', required: true },
-    { key: 'phone', label: 'Phone', labelEs: 'Teléfono', type: 'tel', placeholder: '04xx xxx xxx', placeholderEs: '04xx xxx xxx', required: true },
-    { key: 'path', label: 'Which path interests you?', labelEs: '¿Qué camino te interesa?', type: 'select',
-      options: ['Foundation', 'Progression', 'Mastery', 'Not sure'], optionsEs: ['Base', 'Progresión', 'Maestría', 'Inseguro'], required: true },
+    { key: 'name', label: 'Name', labelEs: 'Nombre', type: 'text', required: true },
+    { key: 'email', label: 'Email', labelEs: 'Correo electrónico', type: 'email', required: true },
+    { key: 'phone', label: 'Phone', labelEs: 'Teléfono', type: 'tel', required: true },
+    { key: 'path', label: 'Which path interests you? (optional)', labelEs: '¿Qué camino te interesa? (opcional)', type: 'select',
+      options: ['Not sure yet', 'Foundation', 'Progression', 'Mastery'], optionsEs: ['Aún no lo sé', 'Base', 'Progresión', 'Maestría'], required: false },
   ],
   text: {
-    eyebrow_en: 'Inquire to Train', eyebrow_es: 'Solicita Entrenar',
+    eyebrow_en: 'Your First Class Is Free', eyebrow_es: 'Tu primera clase es gratis',
     heading_en: 'Begin the Conversation.', heading_es: 'Empieza la Conversación.',
-    intro_en: 'Submit the form and Sigung Vargas (or the Adelaide head instructor) will reach out personally to schedule a private call.',
-    intro_es: 'Envía el formulario y el Sigung Vargas (o el instructor principal de Adelaide) te contactará personalmente para agendar una llamada privada.',
-    submit_en: 'Submit Inquiry', submit_es: 'Enviar Solicitud',
-    privacy_en: 'Your inquiry is private. We do not share your information.',
-    privacy_es: 'Tu solicitud es privada. No compartimos tu información.',
+    intro_en: 'Leave your details and Sigung Vargas (or the Adelaide head instructor) will call you within 24 hours to book your free class and answer your questions.',
+    intro_es: 'Déjanos tus datos y el Sigung Vargas (o el instructor principal de Adelaide) te llamará en menos de 24 horas para agendar tu clase gratis y resolver tus dudas.',
+    submit_en: 'Book My Free Class', submit_es: 'Reservar mi clase gratis',
+    privacy_en: 'No payment, no commitment. We never share your details.',
+    privacy_es: 'Sin pago ni compromiso. Nunca compartimos tus datos.',
   },
 };
 // Códigos de país para el teléfono (Australia por defecto)
@@ -235,8 +269,17 @@ const phoneCcOptions = () => PHONE_CODES.map(([iso, dial, name]) =>
   `<option value="${dial}"${iso === 'AU' ? ' selected' : ''}>${dial} · ${name}</option>`).join('');
 
 let formFields = [];
+let formRendered = false;
+// Teclado y autocompletar en el celular (igual que /free-trial)
+const FIELD_ATTRS = {
+  name: ' autocomplete="name"',
+  email: ' inputmode="email" autocomplete="email"',
+};
 async function renderWebForm() {
   if (!fieldsHost) return;
+  // Conservar lo ya escrito si se vuelve a pintar (p. ej. al cambiar de idioma)
+  const kept = {};
+  fieldsHost.querySelectorAll('input, select, textarea').forEach((el) => { if (el.id) kept[el.id] = el.value; });
   let cfg = null;
   if (!window.JKD_NO_BACKEND) { try { cfg = await fetch(FORM_ENDPOINT).then((r) => r.json()); } catch (e) {} }
   if (!cfg || !Array.isArray(cfg.fields) || !cfg.fields.length) cfg = FALLBACK_FORM;   // CRM no disponible → form por defecto
@@ -252,23 +295,31 @@ async function renderWebForm() {
   fieldsHost.innerHTML = formFields.map((f) => {
     const label = (lang === 'es' && f.labelEs) ? f.labelEs : (f.label || f.key);
     const id = 'wf-' + f.key, req = f.required ? 'required' : '';
+    const extra = (FIELD_ATTRS[f.key] || '') + ` aria-describedby="${id}-err"`;
     const star = f.required ? ' <span style="color:var(--accent)">*</span>' : '';
     const phv = (lang === 'es' && f.placeholderEs) ? f.placeholderEs : (f.placeholder || '');
     const phAttr = phv ? ` placeholder="${escHtml(phv)}"` : '';
     let ctrl;
-    if (f.type === 'textarea') ctrl = `<textarea class="form-control" id="${id}"${phAttr} ${req}></textarea>`;
+    if (f.type === 'textarea') ctrl = `<textarea class="form-control" id="${id}"${phAttr}${extra} ${req}></textarea>`;
     else if (f.type === 'select') {
       const opts = (lang === 'es' && f.optionsEs && f.optionsEs.length) ? f.optionsEs : (f.options || []);
-      ctrl = `<select class="form-control" id="${id}" ${req}><option value="">${escHtml(phv || ph)}</option>${opts.map((o) => `<option>${escHtml(o)}</option>`).join('')}</select>`;
+      // Opcional: sin «Selecciona una opción»; la primera opción («Not sure yet») queda marcada por defecto
+      const placeholder = f.required ? `<option value="">${escHtml(phv || ph)}</option>` : '';
+      ctrl = `<select class="form-control" id="${id}"${extra} ${req}>${placeholder}${opts.map((o) => `<option>${escHtml(o)}</option>`).join('')}</select>`;
     } else if (f.type === 'tel') {
       // Teléfono = un solo control: código de país + número (unidos, sin banderas para verse bien en todos los sistemas)
       ctrl = `<div style="display:flex;align-items:stretch">`
         + `<select class="form-control" id="${id}-cc" aria-label="Código de país" style="flex:0 0 auto;width:158px;max-width:48%;border-top-right-radius:0;border-bottom-right-radius:0;border-right:none;padding-left:14px;padding-right:6px">${phoneCcOptions()}</select>`
-        + `<input class="form-control" type="tel" id="${id}" inputmode="tel"${phAttr || ' placeholder="412 345 678"'} ${req} style="flex:1 1 auto;min-width:0;border-top-left-radius:0;border-bottom-left-radius:0">`
+        + `<input class="form-control" type="tel" id="${id}" inputmode="tel" autocomplete="tel-national"${phAttr || ' placeholder="412 345 678"'}${extra} ${req} style="flex:1 1 auto;min-width:0;border-top-left-radius:0;border-bottom-left-radius:0">`
         + `</div>`;
-    } else ctrl = `<input class="form-control" type="${f.type || 'text'}" id="${id}"${phAttr} ${req}>`;
-    return `<div class="form-group"><label for="${id}">${escHtml(label)}${star}</label>${ctrl}</div>`;
+    } else ctrl = `<input class="form-control" type="${f.type || 'text'}" id="${id}"${phAttr}${extra} ${req}>`;
+    return `<div class="form-group"><label for="${id}">${escHtml(label)}${star}</label>${ctrl}<p class="field-error" id="${id}-err" role="alert" hidden></p></div>`;
   }).join('');
+  Object.keys(kept).forEach((id) => { const el = document.getElementById(id); if (el && kept[id] !== '') el.value = kept[id]; });
+  // Si se llegó con #contact-form, los campos se pintan después de cargar la configuración del CRM:
+  // re-ajustar el salto para que se vean el título y el primer campo.
+  if (!formRendered && form && location.hash === '#contact-form') requestAnimationFrame(() => form.scrollIntoView({ block: 'start' }));
+  formRendered = true;
 }
 if (fieldsHost) {
   renderWebForm();
@@ -284,9 +335,9 @@ async function postLead(payload) {
   const timer = setTimeout(() => { if (ctrl) ctrl.abort(); }, SUBMIT_TIMEOUT_MS);
   try {
     const r = await fetch(CRM_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: ctrl ? ctrl.signal : undefined });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
+    if (!r.ok) { const er = new Error('HTTP ' + r.status); er.kind = 'server'; throw er; }
     const j = await r.json().catch(() => null);
-    if (!j || !j.ok) throw new Error('lead not saved');
+    if (!j || !j.ok) { const er = new Error('lead not saved'); er.kind = 'server'; throw er; }
     return j;
   } finally { clearTimeout(timer); }
 }
@@ -321,11 +372,56 @@ function showFormError(formEl, msg) {
   box.hidden = false;
 }
 
+// Validación propia (debajo de cada campo, en el idioma de la página, foco en el primer error, sin borrar nada)
+const VMSG = {
+  en: { name: 'Please enter your name.', email: 'Please enter your email.', emailBad: 'Please enter a valid email, e.g. you@email.com.',
+        phone: 'Please enter your phone number.', phoneBad: 'Please enter a valid phone number.', other: 'Please complete this field.',
+        server: 'Something went wrong. Please call us on', sending: 'Sending…' },
+  es: { name: 'Escribe tu nombre.', email: 'Escribe tu correo.', emailBad: 'Escribe un correo válido, p. ej. tu@correo.com.',
+        phone: 'Escribe tu teléfono.', phoneBad: 'Escribe un teléfono válido.', other: 'Completa este campo.',
+        server: 'Algo salió mal. Llámanos al', sending: 'Enviando…' },
+};
+const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+function setFieldError(id, msg) {
+  const el = document.getElementById(id), box = document.getElementById(id + '-err');
+  if (el) { if (msg) el.setAttribute('aria-invalid', 'true'); else el.removeAttribute('aria-invalid'); }
+  if (box) { box.textContent = msg || ''; box.hidden = !msg; }
+}
+function validateJoinForm(lang) {
+  const m = VMSG[lang]; const errors = [];
+  formFields.forEach((f) => {
+    const id = 'wf-' + f.key, el = document.getElementById(id);
+    if (!el) return;
+    const v = (el.value || '').trim();
+    let msg = '';
+    if (f.required && !v) msg = m[f.key] || m.other;
+    else if (v && f.type === 'email' && !EMAIL_OK.test(v)) msg = m.emailBad;
+    else if (v && f.type === 'tel' && v.replace(/\D/g, '').length < 8) msg = m.phoneBad;
+    setFieldError(id, msg);
+    if (msg) errors.push({ key: f.key, el });
+  });
+  return errors;
+}
+
 if (form) {
+  form.setAttribute('novalidate', '');            // sin burbujas del navegador: errores propios debajo de cada campo
+  trackFormStart(form, 'join');
+  form.addEventListener('input', (e) => { if (e.target && e.target.id && e.target.getAttribute('aria-invalid')) setFieldError(e.target.id, ''); });
+  // El botón flotante se oculta mientras el formulario está en pantalla
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(([en]) => { formOnScreen = en.isIntersecting; updateFloat(); }, { threshold: 0.05 }).observe(form);
+  }
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = form.querySelector('button[type=submit]');
     const lang = curLang();
+    jkdTrack('form_submit', { form_id: 'join' });
+    const errors = validateJoinForm(lang);
+    if (errors.length) {
+      errors[0].el.focus();
+      jkdTrack('form_error', { form_id: 'join', error_type: 'validation', error_field: errors[0].key });
+      return;
+    }
     const payload = { source: 'website' };
     const extras = [];
     formFields.forEach((f) => {
@@ -344,9 +440,10 @@ if (form) {
       payload.phone = ccEl.value + ' ' + num;
     }
     payload.attribution = buildAttribution(lang);
+    payload.attribution.form_id = 'join';
     if (window.JKD_NO_BACKEND) { window.location.href = thanksUrl(); return; }   // demo estática sin CRM
     const label = btn ? btn.innerHTML : '';
-    if (btn) { btn.disabled = true; btn.textContent = lang === 'es' ? 'Enviando…' : 'Sending…'; }
+    if (btn) { btn.disabled = true; btn.textContent = VMSG[lang].sending; }
     showFormError(form, '');
     try {
       const saved = await postLead(payload);
@@ -354,9 +451,10 @@ if (form) {
       rememberForConversion(payload.email, toE164(ccEl ? ccEl.value : '+61', phoneEl ? phoneEl.value : payload.phone), 'join');
       window.location.href = thanksUrl(saved.id);
     } catch (err) {
-      // No redirigir: el lead NO se guardó. Mostrar el teléfono y reactivar el botón.
+      // No redirigir: el lead NO se guardó. Mostrar el teléfono y reactivar el botón (lo escrito se conserva).
       if (btn) { btn.disabled = false; btn.innerHTML = label; }
-      showFormError(form, lang === 'es' ? 'No pudimos enviar tu solicitud. Inténtalo de nuevo o llámanos al' : "We couldn't send your request. Please try again or call us on");
+      showFormError(form, VMSG[lang].server);
+      jkdTrack('form_error', { form_id: 'join', error_type: err && err.kind === 'server' ? 'server' : 'network' });
     }
   });
 }
@@ -372,9 +470,16 @@ if (trialForm) {
   const btn = trialForm.querySelector('.ft-submit');
   const btnLabel = btn.innerHTML;
 
+  trackFormStart(trialForm, 'free_trial');
   trialForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (!trialForm.reportValidity()) return;
+    jkdTrack('form_submit', { form_id: 'free_trial' });
+    if (!trialForm.checkValidity()) {
+      const bad = trialForm.querySelector(':invalid');
+      jkdTrack('form_error', { form_id: 'free_trial', error_type: 'validation', error_field: bad ? fieldName(bad.id) : '' });
+      trialForm.reportValidity();
+      return;
+    }
     const name = $t('ft-name').value.trim().replace(/\s+/g, ' ');
     const sp = name.indexOf(' ');
     const cc = ccSel ? ccSel.value : '+61';
@@ -385,6 +490,7 @@ if (trialForm) {
     if (attribution.landing_url && attribution.landing_url.indexOf('/free-trial') === -1) attribution.first_landing_url = attribution.landing_url;
     attribution.landing_url = location.href;
     attribution.form = 'free-trial';
+    attribution.form_id = 'free_trial';
     const payload = {
       source: 'free-trial',
       first_name: sp > 0 ? name.slice(0, sp) : name,
@@ -405,8 +511,9 @@ if (trialForm) {
       window.location.href = thanksUrl(saved.id);
     } catch (err) {
       btn.disabled = false; btn.innerHTML = btnLabel;
-      errBox.innerHTML = `We couldn't send your request. Please try again or call us on <a href="${ACADEMY_TEL.href}">${ACADEMY_TEL.label}</a>.`;
+      errBox.innerHTML = `Something went wrong. Please call us on <a href="${ACADEMY_TEL.href}">${ACADEMY_TEL.label}</a>.`;
       errBox.hidden = false;
+      jkdTrack('form_error', { form_id: 'free_trial', error_type: err && err.kind === 'server' ? 'server' : 'network' });
     }
   });
 
@@ -469,11 +576,14 @@ document.querySelectorAll('.ft-map[data-map-src]').forEach((box) => {
 // ===== /thanks: copy específico cuando el lead viene de la clase gratuita =====
 if (/\/thanks(\.html)?$/.test(location.pathname)) {
   let from = ''; try { from = sessionStorage.getItem('jkd_from') || ''; } catch (e) {}
-  if (from === 'free-trial') {
+  if (from === 'free-trial' || from === 'join') {       // los dos formularios ofrecen ahora la clase gratis
+    const es = curLang() === 'es';
     const set = (sel, html) => { const el = document.querySelector(sel); if (el) { el.removeAttribute('data-i18n'); el.removeAttribute('data-i18n-html'); el.innerHTML = html; } };
-    set('.thanks .eyebrow', 'Free class requested');
-    set('.thanks h1', 'You’re in.<br><span class="text-accent">We’ll call you soon</span>.');
-    set('.thanks p.lead', 'Thanks for booking your free Jeet Kune Do class. We’ll call you within 24 hours to find a class time that suits you.');
-    set('.thanks .note', 'Can’t wait? Call us on <a href="tel:+61459785073" style="color:var(--text)">0459 785 073</a>.');
+    const tel = '<a href="tel:+61459785073" style="color:var(--text)">0459 785 073</a>';
+    set('.thanks .eyebrow', es ? 'Clase gratis solicitada' : 'Free class requested');
+    set('.thanks h1', es ? '¡Listo!<br><span class="text-accent">Te llamaremos pronto</span>.' : 'You’re in.<br><span class="text-accent">We’ll call you soon</span>.');
+    set('.thanks p.lead', es ? 'Gracias por reservar tu clase gratis de Jeet Kune Do. Te llamaremos en menos de 24 horas para encontrar un horario que te funcione.'
+                             : 'Thanks for booking your free Jeet Kune Do class. We’ll call you within 24 hours to find a class time that suits you.');
+    set('.thanks .note', es ? '¿No puedes esperar? Llámanos al ' + tel + '.' : 'Can’t wait? Call us on ' + tel + '.');
   }
 }

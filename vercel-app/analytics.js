@@ -28,8 +28,21 @@
   var isThanks = location.pathname.replace(/\/+$/, '').replace(/\.html$/, '') === '/thanks';
   function log() { if (DEBUG && window.console) console.log.apply(console, ['[jkd-analytics]'].concat([].slice.call(arguments))); }
 
-  var started = false, ready = false, pending = [];
+  var started = false, ready = false;
   function go() { if (started) return; started = true; boot(); }
+
+  /* ---- Cola de eventos: lo que pasa antes de que carguen las etiquetas no se pierde ----
+     Se guarda en sessionStorage (no solo en memoria) para sobrevivir a un clic que cambia de página:
+     el evento sale apenas carguen las etiquetas, en esta página o en la siguiente. script.js escribe
+     en la misma cola mientras este script no esté listo. */
+  var QK = 'jkd_evq';
+  function readQ() { try { return JSON.parse(sessionStorage.getItem(QK) || '[]') || []; } catch (e) { return []; } }
+  function writeQ(q) { try { if (q.length) sessionStorage.setItem(QK, JSON.stringify(q.slice(-30))); else sessionStorage.removeItem(QK); } catch (e) {} }
+  function flush() {
+    var q = readQ(); writeQ([]);
+    q.forEach(function (it) { window.gtag('event', it[0], it[1] || {}); });
+    if (q.length) log('cola enviada:', q.length, 'evento(s)');
+  }
   function boot() {
     fetch('/api/public/site-config', { credentials: 'omit' })
       .then(function (r) { return r.json(); })
@@ -54,9 +67,10 @@
 
   /* ---- Clics en teléfono (sitio + landing) ---- */
   function track(name, params) {
-    if (ready && window.gtag) { window.gtag('event', name, params); }
-    else { pending.push([name, params]); go(); }   // se envía apenas cargue gtag
+    if (ready && window.gtag) { window.gtag('event', name, params || {}); }
+    else { var q = readQ(); q.push([name, params || {}]); writeQ(q); go(); }   // sale apenas cargue gtag
   }
+  window.jkdTrackImpl = track;               // usado por script.js (cta_click, form_start, form_submit, form_error)
   document.addEventListener('click', function (e) {
     var a = e.target && e.target.closest ? e.target.closest('a[href^="tel:"]') : null;
     if (!a) return;
@@ -93,7 +107,7 @@
           ? function () { dataLayer.push(arguments); log.apply(null, ['gtag'].concat([].slice.call(arguments))); }
           : function () { dataLayer.push(arguments); };
       }
-      loadScript('https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(googleIds[0]));
+      var gtagScript = loadScript('https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(googleIds[0]));
       gtag('js', new Date());
       if (cfg.ga4_id) gtag('config', cfg.ga4_id);
       if (cfg.google_ads_id) gtag('config', cfg.google_ads_id, { allow_enhanced_conversions: true });
@@ -107,11 +121,16 @@
         }
         var ev = { value: 1, currency: 'AUD' };
         if (lid) ev.transaction_id = lid;
+        // Formulario de origen (join | free_trial), guardado por script.js antes de redirigir
+        try { var fromF = sessionStorage.getItem('jkd_from'); if (fromF) ev.form_id = fromF === 'free-trial' ? 'free_trial' : fromF; } catch (e) {}
         gtag('event', 'generate_lead', ev);
         fired = true;
       }
-      ready = true;
-      while (pending.length) { var p = pending.shift(); gtag('event', p[0], p[1]); }
+      // La cola persistente se vacía SOLO cuando gtag.js ya cargó: si la página cambia antes (clic en un CTA
+      // que navega), los eventos siguen guardados y salen en la página siguiente. En debug no hay script:
+      // se simula una carga de 400 ms para poder probar ese caso en local.
+      var markReady = function () { ready = true; flush(); };
+      if (gtagScript) gtagScript.addEventListener('load', markReady); else setTimeout(markReady, 400);
     }
 
     /* ---- Google Tag Manager (contenedor) ---- */
