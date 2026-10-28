@@ -182,10 +182,16 @@ async function viewKanban() {
       <div><span class="ey">Conversion pipeline</span><h1>From sign-up to enrollment</h1></div>
       <div class="tools">
         <div class="search">${ICON.search}<input id="k-search" placeholder="Search lead…" value="${esc(state.q)}"></div>
+        <div class="k-nav" aria-label="Scroll the pipeline"><button class="btn btn-ghost btn-sm" data-kscroll="-1" title="Previous stages">‹</button><button class="btn btn-ghost btn-sm" data-kscroll="1" title="Next stages">›</button></div>
         <button class="btn btn-ghost btn-sm" id="new-lead">+ Manual lead</button>
       </div>
     </div>
     <div class="kanban" id="kanban"></div>`;
+  // Desplazamiento lateral entre etapas: botones ‹ › (una columna por clic) además de la barra del tablero
+  v.querySelectorAll('[data-kscroll]').forEach((b) => b.addEventListener('click', () => {
+    const k = $('#kanban'); const col = k && k.querySelector('.col');
+    if (k && col) k.scrollBy({ left: Number(b.dataset.kscroll) * (col.offsetWidth + 12), behavior: 'smooth' });
+  }));
 
   $('#new-lead').addEventListener('click', openNewLead);
   $('#k-search').addEventListener('input', (e) => { state.q = e.target.value; paintKanban(); });
@@ -194,14 +200,19 @@ async function viewKanban() {
 }
 
 const KANBAN_BLOCK = 10; // los leads se cargan en bloques de 10 por columna
+// Columna extra al final del pipeline: personas que pidieron no ser contactadas (salen de su etapa)
+const UNSUB_META = { label: 'Unsubscribed', color: 'var(--red)' };
+const KANBAN_COLS = () => [...Object.keys(STATUS_META), 'unsub'];
+const kanbanItems = (leads, st) => (st === 'unsub' ? leads.filter((l) => l.unsubscribed) : leads.filter((l) => !l.unsubscribed && l.status === st));
 
 function paintKanban() {
   const board = $('#kanban'); if (!board) return;
   const q = state.q.toLowerCase();
   const leads = state.leads.filter((l) => !q || `${fullName(l)} ${l.email} ${l.phone}`.toLowerCase().includes(q));
-  board.innerHTML = Object.keys(STATUS_META).map((st) => {
-    const items = leads.filter((l) => l.status === st);
-    const m = STATUS_META[st];
+  const scrollX = board.scrollLeft;
+  board.innerHTML = KANBAN_COLS().map((st) => {
+    const items = kanbanItems(leads, st);
+    const m = st === 'unsub' ? UNSUB_META : STATUS_META[st];
     return `
     <div class="col" data-status="${st}">
       <div class="col-head">
@@ -211,6 +222,7 @@ function paintKanban() {
       <div class="col-body" data-status="${st}">${colBodyHTML(st, items)}</div>
     </div>`;
   }).join('');
+  board.scrollLeft = scrollX;   // repintar no devuelve el tablero a la primera etapa
   wireDnD();
   board.querySelectorAll('.card').forEach((c) => c.addEventListener('click', () => { if (!c.dataset.dragged) openLead(Number(c.dataset.id)); }));
   wireKanbanMore(board, leads);
@@ -231,7 +243,7 @@ function colBodyHTML(st, items) {
 // Botón "ver 10 más" + carga incremental al llegar al final del scroll de cada columna
 function wireKanbanMore(board, leads) {
   const bump = (st) => {
-    const total = leads.filter((l) => l.status === st).length;
+    const total = kanbanItems(leads, st).length;
     const cur = state.kLimit[st] || KANBAN_BLOCK;
     if (cur >= total) return;
     state.kLimit[st] = cur + KANBAN_BLOCK;
@@ -275,7 +287,18 @@ function wireDnD() {
       e.preventDefault(); col.classList.remove('drop');
       const status = col.dataset.status;
       const lead = state.leads.find((l) => l.id === dragId);
-      if (!lead || lead.status === status) return;
+      if (!lead) return;
+      if (status === 'unsub') {
+        if (lead.unsubscribed) return;
+        if (!confirm(`Mark ${fullName(lead)} as unsubscribed? Nobody should contact this person again (calls, email, WhatsApp).`)) return;
+        await setUnsubscribed(lead.id, true);
+        return;
+      }
+      if (lead.unsubscribed) {
+        if (!confirm(`Remove the unsubscribe flag from ${fullName(lead)} and move them to ${STATUS_META[status].label}? Only do this if they asked to be contacted again.`)) return;
+        await setUnsubscribed(lead.id, false);
+        if (lead.status === status) return;
+      } else if (lead.status === status) return;
       if (status === 'perdido') {
         openLossModal(async (reason) => { await changeStatus(dragId, 'perdido', reason); });
       } else {
@@ -283,6 +306,15 @@ function wireDnD() {
       }
     });
   });
+}
+
+async function setUnsubscribed(id, on) {
+  try {
+    await api('PATCH', `/api/leads/${id}`, { unsubscribed: on });
+    await loadLeads();
+    if (state.view === 'kanban') paintKanban();
+    toast(on ? 'Marked as unsubscribed' : 'Unsubscribe removed');
+  } catch (e) { toast('Could not update', 'err'); }
 }
 
 async function changeStatus(id, status, loss_reason) {
