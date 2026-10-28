@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Página privada para alumnos: no se enlaza desde el sitio, no está en el sitemap y no se indexa -->
+<meta name="robots" content="noindex, nofollow">
+<title>Membership Application · Jeet Kune Do Legacy Academy</title>
+<link rel="stylesheet" href="/styles.css">
+<link rel="icon" type="image/png" sizes="48x48" href="/images/favicon-48.png">
+<style>
+  body { background: var(--ink); }
+  .ma-top { border-bottom: 1px solid var(--line); padding: 18px 0; }
+  .ma-top .container { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .ma-top img { height: 34px; width: auto; }
+  .ma-lang { display: inline-flex; gap: 2px; border: 1px solid var(--line-strong); border-radius: 100px; padding: 3px; }
+  .ma-lang button { background: none; border: 0; color: var(--text-mute); font-family: var(--mono); font-size: .66rem; letter-spacing: .14em; padding: 6px 10px; border-radius: 100px; cursor: pointer; }
+  .ma-lang button.active { background: var(--accent); color: #fff; }
+  .ma-wrap { max-width: 860px; margin: 0 auto; padding: 48px 28px 90px; }
+  .ma-wrap h1 { font-size: clamp(2rem, 5vw, 3.2rem); margin: 14px 0 14px; }
+  .ma-intro { color: var(--text-dim); max-width: 62ch; line-height: 1.65; margin-bottom: 34px; }
+  .ma-card { background: var(--ink-2); border: 1px solid var(--line); border-radius: 10px; padding: 26px 26px 10px; margin-bottom: 20px; }
+  .ma-card h2 { font-size: 1.35rem; margin-bottom: 18px; }
+  .ma-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; }
+  .ma-grid .full { grid-column: 1 / -1; }
+  .ma-f { margin-bottom: 16px; }
+  .ma-f label, .ma-legend { display: block; font-family: var(--mono); font-size: .66rem; letter-spacing: .14em; text-transform: uppercase; color: var(--text-mute); margin-bottom: 7px; }
+  .ma-f label .req { color: var(--accent-2); }
+  .ma-f input, .ma-f select, .ma-f textarea { width: 100%; background: rgba(0,0,0,.28); border: 1px solid var(--line-strong); border-radius: 8px; color: var(--text); font: inherit; font-size: 1rem; padding: 12px 14px; }
+  .ma-f textarea { min-height: 84px; resize: vertical; }
+  .ma-f input:focus, .ma-f select:focus, .ma-f textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+  .ma-f [aria-invalid="true"] { border-color: #e2574c; }
+  .ma-err { color: #f08a80; font-size: .82rem; margin-top: 6px; min-height: 0; }
+  .ma-radios { display: flex; flex-wrap: wrap; gap: 10px; }
+  .ma-radios label { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line-strong); border-radius: 100px; padding: 9px 16px; cursor: pointer; text-transform: none; letter-spacing: 0; font-family: var(--sans); font-size: .95rem; color: var(--text); margin: 0; }
+  .ma-radios input { width: auto; accent-color: var(--accent); }
+  .ma-clauses { color: var(--text-dim); font-size: .95rem; line-height: 1.65; padding-left: 1.2em; margin: 10px 0 18px; }
+  .ma-clauses li + li { margin-top: 8px; }
+  .ma-clauses strong { color: var(--text); }
+  .ma-note { font-size: .85rem; color: var(--text-mute); margin: -6px 0 16px; }
+  .ma-check { display: flex; gap: 10px; align-items: flex-start; color: var(--text); font-size: .98rem; margin-bottom: 18px; cursor: pointer; }
+  .ma-check input { margin-top: 4px; width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+  .sig { position: relative; background: #fff; border-radius: 8px; border: 1px solid var(--line-strong); touch-action: none; }
+  .sig canvas { display: block; width: 100%; height: 170px; cursor: crosshair; border-radius: 8px; }
+  .sig .sig-ph { position: absolute; inset: 0; display: grid; place-items: center; color: #9a9a9a; font-size: .95rem; pointer-events: none; }
+  .sig.has .sig-ph { display: none; }
+  .sig-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: .82rem; color: var(--text-mute); }
+  .sig-actions button { background: none; border: 1px solid var(--line-strong); color: var(--text); border-radius: 100px; padding: 6px 14px; cursor: pointer; font-family: var(--mono); font-size: .66rem; letter-spacing: .12em; text-transform: uppercase; }
+  .ma-minor { display: none; }
+  .ma-minor.on { display: block; }
+  .ma-submit { width: 100%; justify-content: center; margin-top: 8px; }
+  .ma-form-err { color: #f08a80; margin-top: 12px; text-align: center; }
+  .ma-done { display: none; text-align: center; background: var(--ink-2); border: 1px solid var(--line); border-radius: 10px; padding: 48px 26px; }
+  .ma-done.on { display: block; }
+  .ma-done h2 { font-size: 2rem; margin-bottom: 12px; }
+  .ma-done p { color: var(--text-dim); max-width: 52ch; margin: 0 auto 26px; line-height: 1.65; }
+  @media (max-width: 640px) { .ma-grid { grid-template-columns: 1fr; } .ma-card { padding: 20px 18px 6px; } }
+</style>
+</head>
+<body>
+<header class="ma-top">
+  <div class="container">
+    <a href="/" aria-label="Jeet Kune Do Legacy Academy"><img src="/images/logo-horizontal-200.webp" alt="Jeet Kune Do Legacy Academy" width="200" height="61"></a>
+    <div class="ma-lang" role="group" aria-label="Language"><button type="button" data-lang="en">EN</button><button type="button" data-lang="es">ES</button></div>
+  </div>
+</header>
+
+<main class="ma-wrap">
+  <span class="eyebrow" data-t="eyebrow">Students only</span>
+  <h1 data-t="h1">Membership Application and Waiver Form</h1>
+  <p class="ma-intro" data-t="intro">Fill in your details and sign at the end. When you submit, you can download your completed form as a PDF — keep a copy for your records.</p>
+
+  <form id="ma-form" novalidate>
+    <section class="ma-card">
+      <h2 data-t="s1">Personal information</h2>
+      <div class="ma-grid">
+        <div class="ma-f"><label for="last_name"><span data-t="last_name">Last name</span> <span class="req">*</span></label><input id="last_name" name="last_name" autocomplete="family-name" required><div class="ma-err"></div></div>
+        <div class="ma-f"><label for="first_name"><span data-t="first_name">First name</span> <span class="req">*</span></label><input id="first_name" name="first_name" autocomplete="given-name" required><div class="ma-err"></div></div>
+        <div class="ma-f"><label for="date_of_birth"><span data-t="dob">Date of birth</span> <span class="req">*</span></label><input id="date_of_birth" name="date_of_birth" type="date" autocomplete="bday" required><div class="ma-err"></div></div>
+        <div class="ma-f"><label for="profession" data-t="profession">Profession</label><input id="profession" name="profession" autocomplete="organization-title"><div class="ma-err"></div></div>
+        <div class="ma-f full"><label for="email"><span data-t="email">Email address</span> <span class="req">*</span></label><input id="email" name="email" type="email" autocomplete="email" inputmode="email" required><div class="ma-err"></div></div>
+        <div class="ma-f full"><label for="street_address"><span data-t="street">Street address</span> <span class="req">*</span></label><input id="street_address" name="street_address" autocomplete="street-address" required><div class="ma-err"></div></div>
+        <div class="ma-f"><label for="postal_code"><span data-t="postcode">Postal code</span> <span class="req">*</span></label><input id="postal_code" name="postal_code" autocomplete="postal-code" inputmode="numeric" required><div class="ma-err"></div></div>
+        <div class="ma-f"><label for="phone_mobile"><span data-t="mobile">Telephone (mobile)</span> <span class="req">*</span></label><input id="phone_mobile" name="phone_mobile" type="tel" autocomplete="tel" required><div class="ma-err"></div></div>
+        <div class="ma-f"><label for="phone_home" data-t="home">Telephone (home)</label><input id="phone_home" name="phone_home" type="tel"><div class="ma-err"></div></div>
+      </div>
+    </section>
+
+    <section class="ma-card">
+      <h2 data-t="s2">Training</h2>
+      <div class="ma-grid">
+        <div class="ma-f full"><label for="experience" data-t="experience">Previous martial arts experience</label><textarea id="experience" name="experience"></textarea><div class="ma-err"></div></div>
+        <div class="ma-f"><label for="level"><span data-t="level">Student level</span> <span class="req">*</span></label>
+          <select id="level" name="level" required><option value="" data-t="select">Select…</option><option>Foundation</option><option>Progression</option><option>Mastery</option></select><div class="ma-err"></div></div>
+        <div class="ma-f"><label for="tshirt" data-t="tshirt">T-shirt size</label>
+          <select id="tshirt" name="tshirt"><option value="" data-t="select">Select…</option><option>XS</option><option>S</option><option>M</option><option>L</option><option>XL</option><option>XXL</option><option>3XL</option></select><div class="ma-err"></div></div>
+        <div class="ma-f full"><span class="ma-legend"><span data-t="fee">Membership fees</span> <span class="req">*</span></span>
+          <div class="ma-radios" id="fee"><label><input type="radio" name="fee" value="New Member ($75.00)"> <span data-t="fee_new">New member ($75.00)</span></label><label><input type="radio" name="fee" value="Existing Member"> <span data-t="fee_existing">Existing member</span></label></div><div class="ma-err"></div></div>
+      </div>
+    </section>
+
+    <section class="ma-card">
+      <h2 data-t="s3">Emergency contact and health</h2>
+      <div class="ma-grid">
+        <div class="ma-f"><label for="emergency_name"><span data-t="em_name">Emergency contact name</span> <span class="req">*</span></label><input id="emergency_name" name="emergency_name" required><div class="ma-err"></div></div>
+        <div class="ma-f"><label for="emergency_phone"><span data-t="em_phone">Emergency contact telephone</span> <span class="req">*</span></label><input id="emergency_phone" name="emergency_phone" type="tel" required><div class="ma-err"></div></div>
+        <div class="ma-f full"><label for="health" data-t="health">Health conditions</label><textarea id="health" name="health" data-tp="health_ph" placeholder="Injuries, medical conditions or medication the instructors should know about. Leave empty if none."></textarea><div class="ma-err"></div></div>
+      </div>
+    </section>
+
+    <section class="ma-card ma-minor" id="minor">
+      <h2 data-t="s4">For minors (under 18)</h2>
+      <p class="ma-note" data-t="minor_note">The applicant is under 18, so a parent or legal guardian must complete this section and sign.</p>
+      <div class="ma-grid">
+        <div class="ma-f"><label for="guardian_name"><span data-t="g_name">Legal guardian name</span> <span class="req">*</span></label><input id="guardian_name" name="guardian_name"><div class="ma-err"></div></div>
+        <div class="ma-f"><label for="guardian_phone"><span data-t="g_phone">Guardian phone number</span> <span class="req">*</span></label><input id="guardian_phone" name="guardian_phone" type="tel"><div class="ma-err"></div></div>
+        <div class="ma-f full"><label for="guardian_address"><span data-t="g_address">Guardian address</span> <span class="req">*</span></label><input id="guardian_address" name="guardian_address"><div class="ma-err"></div></div>
+      </div>
+    </section>
+
+    <section class="ma-card">
+      <h2 data-t="s5">Acknowledgment and agreement</h2>
+      <p class="ma-note" data-t="ack_lead">By signing below, you, on behalf of yourself and any dependents, acknowledge and agree to the following:</p>
+      <ol class="ma-clauses" id="clauses"></ol>
+      <p class="ma-note" data-t="ack_en_note" hidden>The signed document is issued in English. This translation is for reference only.</p>
+      <label class="ma-check" for="agree"><input type="checkbox" id="agree" name="agree"> <span data-t="agree">I have read and agree to the Acknowledgment and Agreement.</span></label>
+      <div class="ma-f" id="agree-f"><div class="ma-err"></div></div>
+
+      <div class="ma-f" id="sig-f">
+        <span class="ma-legend"><span data-t="sig">Applicant signature</span> <span class="req">*</span></span>
+        <div class="sig" id="sig"><canvas aria-label="Applicant signature pad"></canvas><div class="sig-ph" data-t="sig_ph">Sign here with your finger or mouse</div></div>
+        <div class="sig-actions"><span data-t="sig_hint">Your signature is added to the PDF.</span><button type="button" data-clear="sig" data-t="clear">Clear</button></div>
+        <div class="ma-err"></div>
+      </div>
+      <div class="ma-f ma-minor" id="gsig-f">
+        <span class="ma-legend"><span data-t="gsig">Legal guardian consent and approval signature</span> <span class="req">*</span></span>
+        <div class="sig" id="gsig"><canvas aria-label="Guardian signature pad"></canvas><div class="sig-ph" data-t="sig_ph">Sign here with your finger or mouse</div></div>
+        <div class="sig-actions"><span></span><button type="button" data-clear="gsig" data-t="clear">Clear</button></div>
+        <div class="ma-err"></div>
+      </div>
+    </section>
+
+    <button type="submit" class="btn btn-primary ma-submit" id="ma-submit"><span data-t="submit">Submit and download PDF</span> <span class="btn-arrow">→</span></button>
+    <p class="ma-form-err" id="ma-form-err" hidden></p>
+  </form>
+
+  <section class="ma-done" id="ma-done" aria-live="polite">
+    <span class="eyebrow" data-t="done_ey">Form received</span>
+    <h2><span data-t="done_h">Thank you</span><span id="done-name"></span>.</h2>
+    <p data-t="done_p">Your membership form has been saved at the academy. Your PDF is downloading — if it doesn't start, use the button below. The download link is valid for 24 hours.</p>
+    <a class="btn btn-primary" id="ma-pdf" href="#" download><span data-t="download">Download my PDF</span> <span class="btn-arrow">↓</span></a>
+  </section>
+</main>
+
+<script>
+(() => {
+  const CLAUSES = {
+    en: [
+      ['Physical Condition:', 'You are in good physical condition and have no disabilities, diseases, or other conditions that could prevent you from safely participating in the Jeet Kune Do Legacy Academy (JKDLA) training program. You confirm that you have consulted a physician regarding your participation and have received approval to engage in the training activities, or you deem such consultation unnecessary.'],
+      ['Disclosure of Limitations:', 'If you have any special training requirements or physical limitations, you agree to disclose these to the JKDLA instructors before commencing any training.'],
+      ['Assumption of Risk:', 'You understand and accept that participation in the JKDLA training program is at your own risk. You voluntarily waive any claims, demands, injuries, damages, actions, suits, or causes of action arising out of or related to your participation in the program, and release JKDLA from any liability on your behalf and on behalf of your dependents.'],
+      ['Release of Liability:', 'You agree to hold JKDLA harmless from any claims, damages, or liabilities associated with your participation in the training program. By signing this document, you acknowledge that you have read and fully understand the terms of this waiver and release of liability.'],
+      ['Use of Training:', 'You agree to use the training provided by JKDLA solely for personal protection and commit to using only the necessary force to defend yourself in the event of an attack. You understand and agree that the training will never be misused or abused.'],
+    ],
+    es: [
+      ['Condición física:', 'Estás en buena condición física y no tienes discapacidades, enfermedades u otras condiciones que te impidan participar de forma segura en el programa de entrenamiento de Jeet Kune Do Legacy Academy (JKDLA). Confirmas que consultaste a un médico sobre tu participación y recibiste su aprobación para realizar las actividades de entrenamiento, o que consideras innecesaria esa consulta.'],
+      ['Declaración de limitaciones:', 'Si tienes requerimientos especiales de entrenamiento o limitaciones físicas, aceptas informarlas a los instructores de JKDLA antes de comenzar a entrenar.'],
+      ['Asunción del riesgo:', 'Entiendes y aceptas que participas en el programa de entrenamiento de JKDLA bajo tu propio riesgo. Renuncias voluntariamente a cualquier reclamo, demanda, lesión, daño, acción o causa de acción que surja de tu participación en el programa o esté relacionada con ella, y liberas a JKDLA de toda responsabilidad en tu nombre y en el de las personas a tu cargo.'],
+      ['Exoneración de responsabilidad:', 'Aceptas eximir a JKDLA de cualquier reclamo, daño o responsabilidad relacionados con tu participación en el programa de entrenamiento. Al firmar este documento, reconoces que leíste y entiendes plenamente los términos de esta renuncia y exoneración de responsabilidad.'],
+      ['Uso del entrenamiento:', 'Aceptas usar el entrenamiento que brinda JKDLA únicamente para tu protección personal y te comprometes a usar solo la fuerza necesaria para defenderte en caso de un ataque. Entiendes y aceptas que el entrenamiento nunca será mal usado ni utilizado de forma abusiva.'],
+    ],
+  };
+  const T = {
+    es: {
+      eyebrow: 'Solo alumnos', h1: 'Solicitud de membresía y exoneración', intro: 'Completa tus datos y firma al final. Al enviar, podrás descargar tu formulario diligenciado en PDF: guarda una copia.',
+      s1: 'Información personal', last_name: 'Apellido', first_name: 'Nombre', dob: 'Fecha de nacimiento', profession: 'Profesión', email: 'Correo electrónico',
+      street: 'Dirección', postcode: 'Código postal', mobile: 'Teléfono (móvil)', home: 'Teléfono (casa)',
+      s2: 'Entrenamiento', experience: 'Experiencia previa en artes marciales', level: 'Nivel del alumno', tshirt: 'Talla de camiseta', select: 'Selecciona…',
+      fee: 'Cuota de membresía', fee_new: 'Miembro nuevo ($75.00)', fee_existing: 'Miembro actual',
+      s3: 'Contacto de emergencia y salud', em_name: 'Nombre del contacto de emergencia', em_phone: 'Teléfono del contacto de emergencia', health: 'Condiciones de salud',
+      health_ph: 'Lesiones, condiciones médicas o medicamentos que los instructores deban conocer. Déjalo vacío si no tienes ninguno.',
+      s4: 'Para menores de 18 años', minor_note: 'El alumno es menor de 18 años, así que su madre, padre o tutor legal debe completar esta sección y firmar.',
+      g_name: 'Nombre del tutor legal', g_phone: 'Teléfono del tutor', g_address: 'Dirección del tutor',
+      s5: 'Declaración y acuerdo', ack_lead: 'Al firmar, en tu nombre y en el de las personas a tu cargo, reconoces y aceptas lo siguiente:',
+      ack_en_note: 'El documento firmado se emite en inglés. Esta traducción es solo de referencia.',
+      agree: 'Leí y acepto la declaración y el acuerdo.', sig: 'Firma del solicitante', gsig: 'Firma de consentimiento y aprobación del tutor legal',
+      sig_ph: 'Firma aquí con el dedo o el mouse', sig_hint: 'Tu firma se incluye en el PDF.', clear: 'Borrar',
+      submit: 'Enviar y descargar PDF', done_ey: 'Formulario recibido', done_h: 'Gracias',
+      done_p: 'Tu formulario de membresía quedó guardado en la academia. Tu PDF se está descargando; si no empieza, usa el botón. El enlace de descarga vale 24 horas.',
+      download: 'Descargar mi PDF',
+    },
+  };
+  const ERR = {
+    en: { required: 'This field is required.', email: 'Enter a valid email address.', date_of_birth: 'Enter a valid date of birth.', signature: 'Please sign in the box.', agree: 'Please confirm you agree.', fee: 'Choose an option.', server: 'Something went wrong. Please try again or call 0459 785 073.', network: 'Connection problem. Check your internet and try again.' },
+    es: { required: 'Este campo es obligatorio.', email: 'Escribe un correo válido.', date_of_birth: 'Escribe una fecha de nacimiento válida.', signature: 'Firma en el recuadro.', agree: 'Confirma que aceptas.', fee: 'Elige una opción.', server: 'Algo salió mal. Inténtalo de nuevo o llama al 0459 785 073.', network: 'Problema de conexión. Revisa tu internet e inténtalo de nuevo.' },
+  };
+  const $ = (s, r = document) => r.querySelector(s);
+  const form = $('#ma-form');
+  const EN = {};
+  document.querySelectorAll('[data-t]').forEach((el) => { EN[el.dataset.t] = el.textContent; });
+  const EN_PH = $('#health').placeholder;
+  let lang = new URLSearchParams(location.search).get('lang') === 'es' ? 'es' : 'en';
+  try { if (!new URLSearchParams(location.search).get('lang') && localStorage.getItem('jkd-lang') === 'es') lang = 'es'; } catch (e) {}
+
+  function setLang(l) {
+    lang = l;
+    document.documentElement.lang = l;
+    document.querySelectorAll('[data-t]').forEach((el) => { const k = el.dataset.t; el.textContent = l === 'es' && T.es[k] ? T.es[k] : EN[k]; });
+    $('#health').placeholder = l === 'es' ? T.es.health_ph : EN_PH;
+    $('#clauses').innerHTML = CLAUSES[l].map(([b, t]) => `<li><strong>${b}</strong> ${t}</li>`).join('');
+    $('[data-t="ack_en_note"]').hidden = l !== 'es';
+    document.querySelectorAll('.ma-lang button').forEach((b) => b.classList.toggle('active', b.dataset.lang === l));
+    try { localStorage.setItem('jkd-lang', l); } catch (e) {}
+    const u = new URL(location.href); if (l === 'es') u.searchParams.set('lang', 'es'); else u.searchParams.delete('lang'); history.replaceState(null, '', u);
+  }
+  document.querySelectorAll('.ma-lang button').forEach((b) => b.addEventListener('click', () => setLang(b.dataset.lang)));
+
+  // ---- Firmas (canvas con fondo blanco → JPEG para el PDF)
+  function pad(id) {
+    const box = $('#' + id), cv = box.querySelector('canvas'), ctx = cv.getContext('2d');
+    let drawing = false, has = false, last = null;
+    function size() {
+      const r = cv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+      const prev = has ? cv.toDataURL() : null;
+      cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, r.width, r.height);
+      ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#13213f';
+      if (prev) { const im = new Image(); im.onload = () => ctx.drawImage(im, 0, 0, r.width, r.height); im.src = prev; }
+    }
+    const pt = (e) => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+    cv.addEventListener('pointerdown', (e) => { drawing = true; last = pt(e); cv.setPointerCapture(e.pointerId); ctx.beginPath(); ctx.arc(last[0], last[1], 1.1, 0, 7); ctx.fillStyle = '#13213f'; ctx.fill(); });
+    cv.addEventListener('pointermove', (e) => {
+      if (!drawing) return;
+      const p = pt(e);
+      ctx.beginPath(); ctx.moveTo(last[0], last[1]); ctx.lineTo(p[0], p[1]); ctx.stroke(); last = p;
+      if (!has) { has = true; box.classList.add('has'); box.closest('.ma-f').querySelector('.ma-err').textContent = ''; }
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => cv.addEventListener(ev, () => { drawing = false; }));
+    // El recuadro del tutor nace oculto (tamaño 0): se vuelve a medir cuando aparece o cambia de tamaño
+    let lastW = 0;
+    new ResizeObserver(() => { const w = cv.getBoundingClientRect().width; if (w && Math.abs(w - lastW) > 1) { lastW = w; size(); } }).observe(cv);
+    size();
+    return {
+      clear() { has = false; box.classList.remove('has'); size(); },
+      get empty() { return !has; },
+      jpeg() { return has && cv.width > 0 ? cv.toDataURL('image/jpeg', 0.85) : ''; },
+    };
+  }
+  const pads = { sig: pad('sig'), gsig: pad('gsig') };
+  document.querySelectorAll('[data-clear]').forEach((b) => b.addEventListener('click', () => pads[b.dataset.clear].clear()));
+
+  // ---- Menores: la sección del tutor aparece según la fecha de nacimiento
+  function age() {
+    const v = $('#date_of_birth').value; if (!v) return null;
+    const d = new Date(v + 'T00:00:00'), n = new Date();
+    let a = n.getFullYear() - d.getFullYear();
+    if (n.getMonth() < d.getMonth() || (n.getMonth() === d.getMonth() && n.getDate() < d.getDate())) a--;
+    return a;
+  }
+  const isMinor = () => { const a = age(); return a !== null && a < 18; };
+  function toggleMinor() { const m = isMinor(); $('#minor').classList.toggle('on', m); $('#gsig-f').classList.toggle('on', m); }
+  $('#date_of_birth').addEventListener('change', toggleMinor);
+
+  // ---- Validación y envío
+  function fieldBox(name) {
+    if (name === 'signature') return $('#sig-f');
+    if (name === 'guardian_signature') return $('#gsig-f');
+    if (name === 'agree') return $('#agree-f');
+    const el = form.elements[name];
+    return (el && (el.closest ? el.closest('.ma-f') : el[0].closest('.ma-f'))) || null;
+  }
+  function showErr(name, code) {
+    const box = fieldBox(name); if (!box) return;
+    box.querySelector('.ma-err').textContent = ERR[lang][code] || ERR[lang].required;
+    const input = box.querySelector('input,select,textarea'); if (input) input.setAttribute('aria-invalid', 'true');
+  }
+  form.addEventListener('input', (e) => { const box = e.target.closest('.ma-f'); if (box) { box.querySelector('.ma-err').textContent = ''; e.target.removeAttribute('aria-invalid'); } });
+  form.addEventListener('change', (e) => { if (e.target.name === 'fee') $('#fee').closest('.ma-f').querySelector('.ma-err').textContent = ''; if (e.target.id === 'agree') $('#agree-f .ma-err').textContent = ''; });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    form.querySelectorAll('.ma-err').forEach((x) => (x.textContent = ''));
+    const fd = new FormData(form);
+    const body = Object.fromEntries(fd.entries());
+    body.agree = $('#agree').checked;
+    body.signature = pads.sig.jpeg();
+    body.guardian_signature = isMinor() ? pads.gsig.jpeg() : '';
+    body.lang = lang;
+    const req = ['last_name', 'first_name', 'date_of_birth', 'email', 'street_address', 'postal_code', 'phone_mobile', 'level', 'emergency_name', 'emergency_phone'];
+    if (isMinor()) req.push('guardian_name', 'guardian_phone', 'guardian_address');
+    const errs = [];
+    req.forEach((k) => { if (!String(body[k] || '').trim()) errs.push([k, 'required']); });
+    if (!body.fee) errs.push(['fee', 'fee']);
+    if (body.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(body.email)) errs.push(['email', 'email']);
+    if (!body.agree) errs.push(['agree', 'agree']);
+    if (pads.sig.empty) errs.push(['signature', 'signature']);
+    if (isMinor() && pads.gsig.empty) errs.push(['guardian_signature', 'signature']);
+    if (errs.length) { errs.forEach(([k, c]) => showErr(k, c)); fieldBox(errs[0][0])?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+
+    const btn = $('#ma-submit'); btn.disabled = true;
+    const ferr = $('#ma-form-err'); ferr.hidden = true;
+    try {
+      const r = await fetch('/api/public/membership', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.ok) {
+        if (d.field) { showErr(d.field, d.error === 'required' && /signature/.test(d.field) ? 'signature' : d.error); fieldBox(d.field)?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+        else { ferr.textContent = ERR[lang].server; ferr.hidden = false; }
+        btn.disabled = false; return;
+      }
+      $('#ma-pdf').href = d.pdf;
+      $('#done-name').textContent = ', ' + body.first_name;
+      form.style.display = 'none';
+      $('#ma-done').classList.add('on');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setTimeout(() => $('#ma-pdf').click(), 400);     // descarga automática
+    } catch (err) {
+      ferr.textContent = ERR[lang].network; ferr.hidden = false; btn.disabled = false;
+    }
+  });
+
+  setLang(lang);
+})();
+</script>
+</body>
+</html>

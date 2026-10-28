@@ -28,6 +28,7 @@ const ICON = {
   eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>',
   redirect: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 10 20 15 15 20"/><path d="M4 4v7a4 4 0 0 0 4 4h12"/></svg>',
   config: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+  students: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>',
   tasks: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
 };
 
@@ -114,6 +115,7 @@ function renderApp() {
     ['kanban', 'Pipeline', ICON.kanban],
     ['leads', 'Leads', ICON.leads],
     ['tasks', 'Tasks', ICON.tasks],
+    ['students', 'Students', ICON.students],
     ['stats', 'Statistics', ICON.stats],
     ['users', 'Users', ICON.users],
     ['redirects', 'Redirects', ICON.redirect],
@@ -166,7 +168,7 @@ function renderApp() {
 
   $('#badge-leads').textContent = state.leads.length || '';
   paintTaskBadge();
-  const views = { kanban: viewKanban, leads: viewLeads, tasks: viewTasks, stats: viewStats, users: viewUsers, redirects: viewRedirects, config: viewSettings, leadDetail: () => viewLeadDetail(state.detailId) };
+  const views = { kanban: viewKanban, leads: viewLeads, tasks: viewTasks, students: viewStudents, stats: viewStats, users: viewUsers, redirects: viewRedirects, config: viewSettings, leadDetail: () => viewLeadDetail(state.detailId) };
   (views[state.view] || viewKanban)();
 }
 
@@ -251,7 +253,7 @@ function cardHTML(l) {
   const loss = l.status === 'perdido' && l.loss_reason ? `<span class="chip loss">${esc(state.meta.lossReasons[l.loss_reason] || l.loss_reason)}</span>` : '';
   return `
   <div class="card" draggable="true" data-id="${l.id}">
-    <div class="nm">${esc(fullName(l))}</div>
+    <div class="nm">${esc(fullName(l))}${l.unsubscribed ? ' <span class="unsub-tag" title="Unsubscribed — never contact">⛔</span>' : ''}</div>
     <div class="meta"><span>${esc(l.location || '—')}</span><span>·</span><span>${fmtDate(l.created_at)}</span></div>
     <div class="foot">
       <span class="own">${l.owner_name ? `<span class="av">${initials(l.owner_name)}</span>${esc(l.owner_name.split(' ')[0])}` : '<span style="color:var(--mute)">Unassigned</span>'}</span>
@@ -308,7 +310,7 @@ async function viewLeads() {
       </div>
     </div>
     <div class="filters" id="filters">
-      ${['all', ...Object.keys(STATUS_META)].map((f) => `<button class="fbtn ${state.filter === f ? 'active' : ''}" data-f="${f}">${f === 'all' ? 'All' : STATUS_META[f].label}</button>`).join('')}
+      ${['all', ...Object.keys(STATUS_META), 'unsub'].map((f) => `<button class="fbtn ${state.filter === f ? 'active' : ''}" data-f="${f}">${f === 'all' ? 'All' : f === 'unsub' ? '⛔ Unsubscribed' : STATUS_META[f].label}</button>`).join('')}
     </div>
     <div class="panel"><div id="leads-table"></div></div>`;
 
@@ -324,7 +326,7 @@ const LEADS_PER_PAGE = 20; // tamaño de página de la tabla de leads
 function paintLeads() {
   const wrap = $('#leads-table'); if (!wrap) return;
   const q = state.q.toLowerCase();
-  let rows = state.leads.filter((l) => state.filter === 'all' || l.status === state.filter);
+  let rows = state.leads.filter((l) => state.filter === 'all' || (state.filter === 'unsub' ? l.unsubscribed : l.status === state.filter));
   if (q) rows = rows.filter((l) => `${fullName(l)} ${l.email} ${l.phone}`.toLowerCase().includes(q));
   if (!rows.length) { wrap.innerHTML = `<div class="empty"><div class="big">No leads</div>No records match this filter.</div>`; return; }
 
@@ -338,7 +340,7 @@ function paintLeads() {
     <th>Name</th><th>Contact</th><th>Location</th><th>Status</th><th>Owner</th><th>Created</th>
     </tr></thead><tbody>
     ${pageRows.map((l) => `<tr data-id="${l.id}">
-      <td><span class="lead-nm">${esc(fullName(l))}</span></td>
+      <td><span class="lead-nm">${esc(fullName(l))}</span>${l.unsubscribed ? ' <span class="unsub-tag">Unsubscribed</span>' : ''}</td>
       <td>${esc(l.email || '—')}<br><span style="color:var(--mute)">${esc(l.phone || '')}</span></td>
       <td>${esc(l.location || '—')}</td>
       <td><span class="status-pill st-${l.status}"><span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span>${STATUS_META[l.status].label}</span>
@@ -425,11 +427,13 @@ async function viewLeadDetail(id) {
           <span class="status-pill st-${lead.status}"><span style="width:6px;height:6px;border-radius:50%;background:currentColor"></span>${STATUS_META[lead.status].label}</span>
           <span>·</span><span>${esc((lead.source || '').toUpperCase())}</span>
           <span>·</span><span>Registered ${fmtDate(lead.created_at)}</span>
+          ${lead.unsubscribed ? '<span>·</span><span class="unsub-tag">Unsubscribed</span>' : ''}
         </div>
       </div>
       <div class="tools">${isAdmin() ? '<button class="btn btn-ghost btn-sm" id="del">Delete</button>' : ''}</div>
     </div>
 
+    ${lead.unsubscribed ? `<div class="unsub-banner">⛔ <b>Unsubscribed — do not contact.</b> This person asked never to be written to or called${lead.unsubscribed_at ? ` (since ${fmtDate(lead.unsubscribed_at)})` : ''}. Calls, emails and WhatsApp are disabled here.</div>` : ''}
     <div class="ld-tabs" id="ld-tabs">
       <button data-t="perfil" class="active">Profile</button>
       <button data-t="origen">Source</button>
@@ -441,8 +445,8 @@ async function viewLeadDetail(id) {
         <div class="card-box">
           <div class="section-t">Contact information</div>
           <div class="kv">
-            <div class="kv-row"><span class="k">Email</span>${lead.email ? `<a class="v" href="mailto:${esc(lead.email)}">${esc(lead.email)}</a>` : '<span class="v">—</span>'}</div>
-            <div class="kv-row"><span class="k">Phone</span>${lead.phone ? `<a class="v" href="tel:${esc(tel)}">${esc(lead.phone)}</a>` : '<span class="v">—</span>'}</div>
+            <div class="kv-row"><span class="k">Email</span>${lead.email ? (lead.unsubscribed ? `<span class="v">${esc(lead.email)}</span>` : `<a class="v" href="mailto:${esc(lead.email)}">${esc(lead.email)}</a>`) : '<span class="v">—</span>'}</div>
+            <div class="kv-row"><span class="k">Phone</span>${lead.phone ? (lead.unsubscribed ? `<span class="v">${esc(lead.phone)}</span>` : `<a class="v" href="tel:${esc(tel)}">${esc(lead.phone)}</a>`) : '<span class="v">—</span>'}</div>
             <div class="kv-row"><span class="k">Preferred location</span><span class="v">${esc(lead.location || '—')}</span></div>
             <div class="kv-row"><span class="k">Experience</span><span class="v">${esc(lead.experience || '—')}</span></div>
             <div class="kv-row"><span class="k">Source</span><span class="v">${esc(lead.source || '—')}</span></div>
@@ -501,10 +505,16 @@ async function viewLeadDetail(id) {
         <div class="card-box">
           <div class="section-t">Quick actions</div>
           <div style="display:flex;flex-direction:column;gap:9px">
+            ${lead.unsubscribed ? '<p style="font-size:.82rem;color:var(--red);line-height:1.5">Disabled: this person is unsubscribed.</p>' : `
             ${lead.email ? `<a class="btn btn-ghost btn-sm" href="mailto:${esc(lead.email)}" style="justify-content:center">✉ Send email</a>` : ''}
             ${lead.phone ? `<a class="btn btn-ghost btn-sm" href="tel:${esc(tel)}" style="justify-content:center">☎ Call</a>` : ''}
-            ${lead.phone ? `<a class="btn btn-ghost btn-sm" href="https://wa.me/${esc(wa)}" target="_blank" rel="noopener" style="justify-content:center">WhatsApp</a>` : ''}
+            ${lead.phone ? `<a class="btn btn-ghost btn-sm" href="https://wa.me/${esc(wa)}" target="_blank" rel="noopener" style="justify-content:center">WhatsApp</a>` : ''}`}
           </div>
+        </div>
+        <div class="card-box">
+          <div class="section-t">Communication</div>
+          <p style="font-size:.82rem;color:var(--dim);line-height:1.55;margin-bottom:12px">${lead.unsubscribed ? 'Unsubscribed: never contact this person.' : 'Mark as <b>unsubscribed</b> if this person asked never to be contacted again. It applies to every lead with the same email.'}</p>
+          <button class="btn btn-sm ${lead.unsubscribed ? 'btn-ghost' : 'btn-unsub'}" id="unsub-btn" style="width:100%;justify-content:center">${lead.unsubscribed ? 'Remove unsubscribe' : '⛔ Mark as unsubscribed'}</button>
         </div>
         <div class="card-box">
           <div class="section-t section-t-row">Tasks / reminders<button class="btn btn-ghost btn-sm" id="ld-task-add">+ Add</button></div>
@@ -514,6 +524,12 @@ async function viewLeadDetail(id) {
     </div>`;
 
   $('#back').addEventListener('click', backToLeads);
+  $('#unsub-btn').addEventListener('click', async () => {
+    const on = !lead.unsubscribed;
+    if (!confirm(on ? 'Mark this person as unsubscribed? Nobody should contact them again (calls, email, WhatsApp).' : 'Remove the unsubscribe flag? Only do this if the person asked to be contacted again.')) return;
+    try { await api('PATCH', `/api/leads/${id}`, { unsubscribed: on }); await loadLeads(); toast(on ? 'Marked as unsubscribed' : 'Unsubscribe removed'); viewLeadDetail(id); }
+    catch (e) { toast('Could not update', 'err'); }
+  });
   $('#del')?.addEventListener('click', async () => {
     if (!confirm('Delete this lead permanently?')) return;
     try { await api('DELETE', `/api/leads/${id}`); await loadLeads(); toast('Lead deleted'); backToLeads(); }
@@ -592,6 +608,8 @@ function eventHTML(ev) {
   if (ev.type === 'created') txt = `Lead created${ev.note ? ` · ${esc(ev.note)}` : ''}`;
   else if (ev.type === 'status') { cls = ev.to_status; txt = `Moved to <b style="color:var(--text)">${STATUS_META[ev.to_status]?.label || ev.to_status}</b>${ev.loss_reason ? ` — ${esc(state.meta.lossReasons[ev.loss_reason] || ev.loss_reason)}` : ''}`; }
   else if (ev.type === 'note') txt = `📝 ${esc(ev.note)}`;
+  else if (ev.type === 'unsubscribe') { cls = 'perdido'; txt = `⛔ ${esc(ev.note || 'Unsubscribed')}`; }
+  else if (ev.type === 'resubscribe') txt = `✓ ${esc(ev.note || 'Unsubscribe removed')}`;
   return `<div class="tl ${cls}"><span class="dot"></span><div class="body"><div class="t">${txt}</div><div class="d">${fmtDateTime(ev.created_at)}${ev.user_name ? ' · ' + esc(ev.user_name) : ''}</div></div></div>`;
 }
 
@@ -1214,6 +1232,90 @@ async function viewStats(month) {
   $('#stat-month')?.addEventListener('change', (e) => viewStats(e.target.value || undefined));
 }
 
+
+// ============================================================
+//  STUDENTS — fichas de membresía enviadas desde /membership-application
+// ============================================================
+const MS_FIELDS = [
+  ['Personal information', [['last_name', 'Last name'], ['first_name', 'First name'], ['date_of_birth', 'Date of birth'], ['email', 'Email'], ['profession', 'Profession'],
+    ['street_address', 'Street address'], ['postal_code', 'Postal code'], ['phone_mobile', 'Telephone (mobile)'], ['phone_home', 'Telephone (home)']]],
+  ['Training', [['level', 'Student level'], ['fee', 'Membership fees'], ['tshirt', 'T-shirt size'], ['experience', 'Previous martial arts experience']]],
+  ['Emergency contact and health', [['emergency_name', 'Emergency contact'], ['emergency_phone', 'Emergency phone'], ['health', 'Health conditions']]],
+  ['Minor — legal guardian', [['guardian_name', 'Guardian name'], ['guardian_phone', 'Guardian phone'], ['guardian_address', 'Guardian address']]],
+];
+const ageFrom = (dob) => { const d = new Date(dob + 'T00:00:00'); if (isNaN(d)) return ''; const n = new Date(); let a = n.getFullYear() - d.getFullYear(); if (n.getMonth() < d.getMonth() || (n.getMonth() === d.getMonth() && n.getDate() < d.getDate())) a--; return a; };
+const FORM_URL = location.origin + '/membership-application';
+
+async function viewStudents() {
+  const v = $('#view');
+  v.innerHTML = '<div class="empty">Loading…</div>';
+  let rows;
+  try { rows = await api('GET', '/api/memberships'); } catch (e) { v.innerHTML = '<div class="empty">Error loading the forms.</div>'; return; }
+  v.innerHTML = `
+    <div class="topbar">
+      <div><span class="ey">Students</span><h1>Membership forms</h1></div>
+      <div class="tools">
+        <div class="search">${ICON.search}<input id="st-search" placeholder="Search name, email…"></div>
+        <button class="btn btn-ghost btn-sm" id="st-copy">Copy form link</button>
+        <a class="btn btn-primary btn-sm" href="/membership-application" target="_blank" rel="noopener">Open form ↗</a>
+      </div>
+    </div>
+    <p class="blog-intro">Existing students fill in the private form at <code>/membership-application</code> (not linked from the site, not indexed by Google). Each submission is saved here and the student downloads the signed PDF. Send them the link by message or show a QR code at the school.</p>
+    <div class="panel"><div id="st-table"></div></div>`;
+  const paint = () => {
+    const q = ($('#st-search').value || '').toLowerCase();
+    const list = rows.filter((r) => !q || `${r.first_name} ${r.last_name} ${r.email} ${r.phone}`.toLowerCase().includes(q));
+    const wrap = $('#st-table');
+    if (!list.length) { wrap.innerHTML = `<div class="empty"><div class="big">${rows.length ? 'No matches' : 'No forms yet'}</div>${rows.length ? '' : 'Share the form link with your students.'}</div>`; return; }
+    wrap.innerHTML = `<table><thead><tr><th>Student</th><th>Contact</th><th>Age</th><th>Level</th><th>Fee</th><th>Submitted</th><th></th></tr></thead><tbody>
+      ${list.map((r) => `<tr class="st-row" data-id="${r.id}">
+        <td><span class="lead-nm">${esc(r.first_name)} ${esc(r.last_name)}</span></td>
+        <td>${esc(r.email)}<br><span style="color:var(--mute)">${esc(r.phone || '')}</span></td>
+        <td>${ageFrom(r.date_of_birth)}${r.minor ? ' <span class="chip">Minor</span>' : ''}</td>
+        <td>${esc(r.level || '—')}</td>
+        <td>${esc(r.fee || '—')}</td>
+        <td>${fmtDate(r.created_at)}</td>
+        <td style="text-align:right;white-space:nowrap"><a class="btn btn-ghost btn-sm" data-stop href="${API_BASE}/api/memberships/${r.id}/pdf">PDF ↓</a></td>
+      </tr>`).join('')}
+    </tbody></table>`;
+    wrap.querySelectorAll('.st-row').forEach((tr) => tr.addEventListener('click', (e) => { if (!e.target.closest('[data-stop]')) openStudent(Number(tr.dataset.id), () => viewStudents()); }));
+  };
+  $('#st-search').addEventListener('input', paint);
+  $('#st-copy').addEventListener('click', () => navigator.clipboard.writeText(FORM_URL).then(() => toast('Form link copied')).catch(() => toast(FORM_URL)));
+  paint();
+}
+
+async function openStudent(id, onDeleted) {
+  let r; try { r = await api('GET', `/api/memberships/${id}`); } catch (e) { toast('Could not open the form', 'err'); return; }
+  const d = r.data || {};
+  const val = (k) => (k === 'date_of_birth' && d[k] ? `${fmtDate(d[k] + 'T00:00:00')} (${ageFrom(d[k])})` : d[k]);   // fecha sin hora: evita el corrimiento de zona horaria
+  const groups = MS_FIELDS.filter(([g]) => !g.startsWith('Minor') || d.minor).map(([g, fields]) => `
+    <div class="section-t" style="margin-top:16px">${g}</div>
+    <div class="kv">${fields.map(([k, label]) => `<div class="kv-row"><span class="k">${label}</span><span class="v" style="text-align:right;white-space:pre-wrap">${esc(val(k) || '—')}</span></div>`).join('')}</div>`).join('');
+  modal(`
+    <h2>${esc(d.first_name)} ${esc(d.last_name)}</h2>
+    <p class="desc">Membership Application and Waiver Form · submitted ${fmtDateTime(r.created_at)} · ref JKD-M-${String(r.id).padStart(4, '0')}</p>
+    <div style="max-height:56vh;overflow:auto;padding-right:6px">${groups}
+      <div class="section-t" style="margin-top:16px">Agreement</div>
+      <div class="kv">
+        <div class="kv-row"><span class="k">Acknowledgment accepted</span><span class="v">${d.agree ? '✓ Yes' : '—'}</span></div>
+        <div class="kv-row"><span class="k">Applicant signature</span><span class="v">${d.has_signature ? '✓ Signed' : '—'}</span></div>
+        ${d.minor ? `<div class="kv-row"><span class="k">Guardian signature</span><span class="v">${d.has_guardian_signature ? '✓ Signed' : '—'}</span></div>` : ''}
+      </div>
+    </div>
+    <div class="modal-foot">
+      ${isAdmin() ? '<button class="btn btn-ghost btn-sm danger-text" id="st-del">Delete</button>' : ''}
+      <button class="btn btn-ghost btn-sm" id="st-close">Close</button>
+      <a class="btn btn-primary btn-sm" href="${API_BASE}/api/memberships/${r.id}/pdf">Download PDF</a>
+    </div>`);
+  $('#st-close').addEventListener('click', closeModal);
+  $('#st-del')?.addEventListener('click', async () => {
+    if (!confirm('Delete this membership form permanently?')) return;
+    try { await api('DELETE', `/api/memberships/${r.id}`); closeModal(); toast('Form deleted'); onDeleted && onDeleted(); }
+    catch (e) { toast('Could not delete', 'err'); }
+  });
+}
+
 // ---------- data loaders ----------
 async function loadLeads() { state.leads = await api('GET', '/api/leads'); const b = $('#badge-leads'); if (b) b.textContent = state.leads.length || ''; }
 
@@ -1240,7 +1342,7 @@ function syncHash() {
   const h = location.hash.replace(/^#/, '');
   const m = h.match(/^lead-(\d+)$/);
   if (m) { state.detailId = Number(m[1]); state.view = 'leadDetail'; }
-  else if (['kanban', 'leads', 'tasks', 'stats', 'users', 'redirects', 'config'].includes(h)) { state.view = h; }
+  else if (['kanban', 'leads', 'tasks', 'students', 'stats', 'users', 'redirects', 'config'].includes(h)) { state.view = h; }
   else if (state.view === 'leadDetail') { state.view = 'leads'; }
   renderApp();
 }

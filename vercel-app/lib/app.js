@@ -12,6 +12,7 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import * as db from './db.js';
 import { sendMagicLink, sendLeadNotification, sendTaskReminder } from './email.js';
+import { validateMembership, membershipPdf } from './membership.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');                      // …/jkd-legacy-crm (o raíz en Vercel)
@@ -151,6 +152,7 @@ async function ensureSchema() {
     `CREATE TABLE IF NOT EXISTS redirects (id INTEGER PRIMARY KEY, from_path TEXT NOT NULL UNIQUE, to_path TEXT NOT NULL, code INTEGER NOT NULL DEFAULT 301, active INTEGER NOT NULL DEFAULT 1, hits INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL)`,
     `CREATE TABLE IF NOT EXISTS rate_hits (bucket TEXT PRIMARY KEY, count INTEGER NOT NULL, window_start TEXT NOT NULL)`,
     `CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY, lead_id INTEGER, title TEXT NOT NULL, due_at TEXT, status TEXT NOT NULL DEFAULT 'pendiente', owner_id INTEGER, created_by INTEGER, created_at TEXT NOT NULL, done_at TEXT)`,
+    `CREATE TABLE IF NOT EXISTS memberships (id INTEGER PRIMARY KEY, token TEXT NOT NULL UNIQUE, first_name TEXT, last_name TEXT, email TEXT, phone TEXT, date_of_birth TEXT, minor INTEGER NOT NULL DEFAULT 0, data TEXT NOT NULL, created_at TEXT NOT NULL)`,
     `CREATE INDEX IF NOT EXISTS idx_leads_updated ON leads(updated_at)`,
     `CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status)`,
     `CREATE INDEX IF NOT EXISTS idx_events_lead ON lead_events(lead_id)`,
@@ -158,7 +160,8 @@ async function ensureSchema() {
     `CREATE INDEX IF NOT EXISTS idx_tasks_lead ON tasks(lead_id)`,
   ]);
   // Migraciones idempotentes para BDs preexistentes (columnas ya incluidas arriba en BDs nuevas)
-  for (const stmt of ['ALTER TABLE leads ADD COLUMN attribution TEXT', 'ALTER TABLE sessions ADD COLUMN impersonator_id INTEGER']) {
+  for (const stmt of ['ALTER TABLE leads ADD COLUMN attribution TEXT', 'ALTER TABLE sessions ADD COLUMN impersonator_id INTEGER',
+    'ALTER TABLE leads ADD COLUMN unsubscribed INTEGER NOT NULL DEFAULT 0', 'ALTER TABLE leads ADD COLUMN unsubscribed_at TEXT']) {
     try { await db.run(stmt); } catch (e) { /* la columna ya existe */ }
   }
 }
@@ -231,6 +234,16 @@ async function ensureSettings() {
     if (changed) await db.run("UPDATE settings SET value=?, updated_at=? WHERE key='form_config'", [JSON.stringify(obj), nowISO()]);
   } catch (e) { /* noop */ }
 }
+// Ficha de membresía guardada → objeto con data parseada; PDF como descarga
+function membershipRow(row) { let data = {}; try { data = JSON.parse(row.data || '{}'); } catch (e) {} return { ...row, data }; }
+function sendMembershipPdf(res, row) {
+  const rec = membershipRow(row);
+  const buf = membershipPdf(rec);
+  const name = `Membership-Application-${rec.last_name || ''}-${rec.first_name || ''}`.replace(/[^A-Za-z0-9-]+/g, '-').replace(/-+/g, '-');
+  res.writeHead(200, { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="${name}.pdf"`, 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' });
+  return res.end(buf);
+}
+
 async function getAllSettings() {
   const o = {};
   for (const r of await db.all('SELECT key,value FROM settings')) o[r.key] = r.value;
@@ -279,7 +292,7 @@ const MIGRATION_REDIRECTS = {
 // Páginas reales del sitio nuevo (para no redirigirlas por error y para el fallback de "primer segmento").
 const REAL_PAGES = ['legacy', 'the-way', 'join-the-family', 'thanks', 'free-trial', 'privacy'];
 // Landings de pauta: solo en inglés y noindex → sin hreflang/og:locale alternativos.
-const EN_ONLY_PAGES = ['/free-trial', '/privacy'];
+const EN_ONLY_PAGES = ['/free-trial', '/privacy', '/membership-application'];
 // Destino de migración para CUALQUIER ruta vieja (incluye assets .js, rutas con // dobles,
 // /feed, /author, /category, /tag, archivos de fecha /2019/10/, wp-*, etc.). Devuelve null si no aplica.
 // Manda a una página ÚTIL del sitio nuevo; la basura de WordPress sin equivalente va al home.
@@ -649,6 +662,25 @@ export async function handle(req, res) {
     return json(res, 200, publicSiteConfig(await getAllSettings()));
   }
 
+  // Ficha de membresía (página privada /membership-application): guarda la ficha y entrega el PDF diligenciado
+  if (p === '/api/public/membership' && method === 'POST') {
+    if (!(await rateOk(`member:${clientIp(req)}`, 10, 3600))) return json(res, 429, { error: 'Too many requests. Please try again later.' });
+    const v = validateMembership(await readBody(req));
+    if (v.error) return json(res, 400, v);
+    const d = v.data, t = nowISO(), tk = token(24);
+    const r = await db.run('INSERT INTO memberships (token,first_name,last_name,email,phone,date_of_birth,minor,data,created_at) VALUES (?,?,?,?,?,?,?,?,?)',
+      [tk, d.first_name, d.last_name, d.email, d.phone_mobile, d.date_of_birth, d.minor ? 1 : 0, JSON.stringify(d), t]);
+    return json(res, 201, { ok: true, id: r.lastInsertRowid, pdf: '/api/public/membership-pdf?t=' + tk });
+  }
+  if (p === '/api/public/membership-pdf' && method === 'GET') {
+    const tk = String(url.searchParams.get('t') || '');
+    if (!/^[a-f0-9]{48}$/.test(tk)) return json(res, 404, { error: 'not found' });
+    const row = await db.get('SELECT * FROM memberships WHERE token=?', [tk]);
+    // El enlace del alumno vale 24 h; después la ficha solo se descarga desde el CRM
+    if (!row || Date.now() - Date.parse(row.created_at) > 24 * 3600 * 1000) return json(res, 404, { error: 'expired' });
+    return sendMembershipPdf(res, row);
+  }
+
   // Public intake — rate-limited + validado + honeypot
   if (p === '/api/public/lead') {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -671,6 +703,14 @@ export async function handle(req, res) {
         [cap(b.first_name, 120), cap(b.last_name, 120), email, cap(b.phone, 60), cap(b.location, 120), cap(b.experience, 80), cap(b.message, 2000), cap(b.source, 60) || 'website', attribution, t, t]);
       const ch = (b.attribution && typeof b.attribution === 'object' && b.attribution.channel) ? ` · ${String(b.attribution.channel).slice(0, 60)}` : '';
       await db.run(`INSERT INTO lead_events (lead_id,type,to_status,note,created_at) VALUES (?, 'created','registrado',?, ?)`, [r.lastInsertRowid, 'Recibido desde el sitio web' + ch, t]);
+      // Unsubscribe es por persona: si ese correo ya pidió no ser contactado, el lead nuevo entra marcado
+      if (email) {
+        const unsub = await db.get('SELECT id FROM leads WHERE unsubscribed=1 AND lower(email)=lower(?) AND id<>? LIMIT 1', [email, r.lastInsertRowid]);
+        if (unsub) {
+          await db.run('UPDATE leads SET unsubscribed=1, unsubscribed_at=? WHERE id=?', [t, r.lastInsertRowid]);
+          await db.run(`INSERT INTO lead_events (lead_id,type,note,created_at) VALUES (?, 'unsubscribe', ?, ?)`, [r.lastInsertRowid, 'Previously unsubscribed (same email) — do not contact', t]);
+        }
+      }
       // Notifica por correo a TODOS los administradores (best-effort: nunca rompe la captura del lead).
       try {
         const admins = await db.all("SELECT email FROM users WHERE role='admin' AND active=1");
@@ -800,6 +840,15 @@ export async function handle(req, res) {
       }
       if (!sub && method === 'PATCH') {
         const b = await readBody(req);
+        if ('unsubscribed' in b) {
+          const on = b.unsubscribed ? 1 : 0, t = nowISO();
+          const targets = lead.email ? await db.all('SELECT id FROM leads WHERE lower(email)=lower(?)', [lead.email]) : [{ id }];
+          for (const x of targets) {
+            await db.run('UPDATE leads SET unsubscribed=?, unsubscribed_at=?, updated_at=? WHERE id=?', [on, on ? t : null, t, x.id]);
+            await db.run('INSERT INTO lead_events (lead_id,type,note,user_id,created_at) VALUES (?,?,?,?,?)',
+              [x.id, on ? 'unsubscribe' : 'resubscribe', on ? 'Marked as unsubscribed — never contact' : 'Unsubscribe removed', user.id, t]);
+          }
+        }
         const fields = ['first_name', 'last_name', 'email', 'phone', 'location', 'experience', 'message', 'owner_id'];
         const sets = [], vals = [];
         for (const f of fields) if (f in b) { sets.push(`${f}=?`); vals.push(f === 'owner_id' ? (b[f] || null) : cap(b[f], f === 'message' ? 2000 : 160)); }
@@ -955,6 +1004,30 @@ export async function handle(req, res) {
       return json(res, 200, await getAllSettings());
     }
 
+    // Fichas de membresía (CRM → Students). Contienen datos de salud: solo personal con sesión; borrar, solo admin
+    if (p === '/api/memberships' && method === 'GET') {
+      const rows = await db.all('SELECT * FROM memberships ORDER BY datetime(created_at) DESC LIMIT 2000');
+      return json(res, 200, rows.map((r) => {
+        const d = membershipRow(r).data;
+        return { id: r.id, first_name: r.first_name, last_name: r.last_name, email: r.email, phone: r.phone, date_of_birth: r.date_of_birth, minor: !!r.minor, level: d.level || '', fee: d.fee || '', created_at: r.created_at };
+      }));
+    }
+    const msMatch = p.match(/^\/api\/memberships\/(\d+)(\/pdf)?$/);
+    if (msMatch) {
+      const row = await db.get('SELECT * FROM memberships WHERE id=?', [Number(msMatch[1])]);
+      if (!row) return json(res, 404, { error: 'not found' });
+      if (msMatch[2] && method === 'GET') return sendMembershipPdf(res, row);
+      if (!msMatch[2] && method === 'GET') {
+        const { signature, guardian_signature, ...d } = membershipRow(row).data;
+        return json(res, 200, { id: row.id, created_at: row.created_at, data: { ...d, has_signature: !!signature, has_guardian_signature: !!guardian_signature } });
+      }
+      if (!msMatch[2] && method === 'DELETE') {
+        if (user.role !== 'admin') return json(res, 403, { error: 'admin only' });
+        await db.run('DELETE FROM memberships WHERE id=?', [row.id]);
+        return json(res, 200, { ok: true });
+      }
+    }
+
     // Redirecciones 301/302 (solo admin)
     if (p === '/api/redirects' && method === 'GET') {
       if (user.role !== 'admin') return json(res, 403, { error: 'admin only' });
@@ -1001,6 +1074,7 @@ export async function handle(req, res) {
   const gz = /\bgzip\b/.test(req.headers['accept-encoding'] || '');
   if (isCrm) return serveStatic(res, p, PUBLIC_DIR, true, gz, false, null);
   const lang = url.searchParams.get('lang') === 'es' ? 'es' : 'en';
+  if (p === '/membership-application') res.setHeader('X-Robots-Tag', 'noindex, nofollow');   // página privada para alumnos
   return serveStatic(res, p, SITE_DIR, false, gz, true, { lang, path: p });
 }
 
