@@ -34,7 +34,9 @@
   /* ---- Cola de eventos: lo que pasa antes de que carguen las etiquetas no se pierde ----
      Se guarda en sessionStorage (no solo en memoria) para sobrevivir a un clic que cambia de página:
      el evento sale apenas carguen las etiquetas, en esta página o en la siguiente. script.js escribe
-     en la misma cola mientras este script no esté listo. */
+     en la misma cola mientras este script no esté listo.
+     Con gtag ya cargado, un evento justo antes de cambiar de página (CTA, redirección a /thanks) NO se
+     pierde: gtag lo despacha en pagehide con fetch keepalive (verificado con net-log de Chrome). */
   var QK = 'jkd_evq';
   function readQ() { try { return JSON.parse(sessionStorage.getItem(QK) || '[]') || []; } catch (e) { return []; } }
   function writeQ(q) { try { if (q.length) sessionStorage.setItem(QK, JSON.stringify(q.slice(-30))); else sessionStorage.removeItem(QK); } catch (e) {} }
@@ -55,8 +57,8 @@
       });
   }
 
-  if (isThanks) {
-    go();                                   // conversión: sin esperar interacción ni 4 s
+  if (isThanks || readQ().length) {
+    go();                                   // conversión, o eventos pendientes de la página anterior: sin esperar
   } else {
     // Diferir la analítica fuera de la carga crítica (mejor LCP/TBT).
     ['pointerdown', 'keydown', 'touchstart', 'scroll'].forEach(function (ev) { addEventListener(ev, go, { once: true, passive: true }); });

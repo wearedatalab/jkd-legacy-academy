@@ -471,6 +471,9 @@ if (trialForm) {
   const btnLabel = btn.innerHTML;
 
   trackFormStart(trialForm, 'free_trial');
+  // Sin novalidate el navegador bloquea el envío inválido ANTES del evento submit (form_submit/form_error
+  // nunca salían); la validación nativa la mostramos nosotros con reportValidity().
+  trialForm.setAttribute('novalidate', '');
   trialForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     jkdTrack('form_submit', { form_id: 'free_trial' });
