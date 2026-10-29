@@ -590,3 +590,51 @@ if (/\/thanks(\.html)?$/.test(location.pathname)) {
     set('.thanks .note', es ? '¿No puedes esperar? Llámanos al ' + tel + '.' : 'Can’t wait? Call us on ' + tel + '.');
   }
 }
+
+
+// ===== Reseñas de Google (/api/public/reviews): se piden cuando la sección se acerca al viewport =====
+(() => {
+  const sec = document.querySelector('[data-reviews]');
+  if (!sec || window.JKD_NO_BACKEND) return;
+  const esc = (s) => String(s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const safeUrl = (u) => (/^https:\/\//.test(u || '') ? u : '');
+  const load = () => fetch('/api/public/reviews').then((r) => (r.ok ? r.json() : null)).then((d) => {
+    if (!d) return;
+    const es = document.documentElement.lang === 'es';
+    sec.querySelector('.rv-rating').textContent = Number(d.rating || 5).toFixed(1);
+    sec.querySelector('.rv-count').textContent = es ? `${d.count} reseñas en Google` : `${d.count} reviews on Google`;
+    if (safeUrl(d.url)) sec.querySelectorAll('.rv-all').forEach((a) => { a.href = d.url; });
+    if (safeUrl(d.writeUrl)) sec.querySelectorAll('.rv-write').forEach((a) => { a.href = d.writeUrl; });
+    if (!Array.isArray(d.reviews) || !d.reviews.length) return;
+    sec.querySelector('[data-reviews-grid]').innerHTML = d.reviews.slice(0, 5).map((v) => {
+      const initial = esc((v.author || '?').trim().charAt(0).toUpperCase());
+      const photo = safeUrl(v.photo) ? `<img src="${esc(v.photo)}" alt="" width="40" height="40" loading="lazy" referrerpolicy="no-referrer">` : `<span class="rv-initial" aria-hidden="true">${initial}</span>`;
+      const name = safeUrl(v.authorUrl) ? `<a href="${esc(v.authorUrl)}" target="_blank" rel="noopener noreferrer">${esc(v.author)}</a>` : esc(v.author);
+      const more = safeUrl(v.url) ? `<a class="rv-more" href="${esc(v.url)}" target="_blank" rel="noopener noreferrer">${es ? 'Leer en Google' : 'Read on Google'}</a>` : '';
+      return `<figure class="review-card"><div class="rv-stars" aria-label="${v.rating} / 5">${'★'.repeat(v.rating)}${'☆'.repeat(5 - v.rating)}</div>`
+        + `<blockquote>${esc(v.text)}</blockquote>${more}`
+        + `<figcaption>${photo}<span><strong>${name}</strong><small>${esc(v.when)} · Google</small></span></figcaption></figure>`;
+    }).join('');
+    sec.classList.add('has-reviews');
+  }).catch(() => {});
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver((ents) => { if (ents.some((e) => e.isIntersecting)) { io.disconnect(); load(); } }, { rootMargin: '600px' });
+    io.observe(sec);
+  } else load();
+})();
+
+// ===== Selector de idioma de las páginas generadas (landings y blog: cada idioma es un HTML propio) =====
+(() => {
+  const sw = document.querySelector('.lang-switch');
+  if (!sw) return;
+  sw.querySelectorAll('a[data-lang]').forEach((a) => a.addEventListener('click', () => {
+    try { localStorage.setItem('jkd-lang', a.dataset.lang); } catch (e) {}
+  }));
+  // Si el visitante eligió español en otra página, abre la versión en español (misma regla que i18n.js)
+  let saved = null; try { saved = localStorage.getItem('jkd-lang'); } catch (e) {}
+  const u = new URLSearchParams(location.search).get('lang');
+  if (!u && saved === 'es' && document.documentElement.lang !== 'es') {
+    const es = sw.querySelector('a[data-lang="es"]');
+    if (es) location.replace(es.href + location.hash);
+  }
+})();

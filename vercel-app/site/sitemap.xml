@@ -1,10 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>
-<!-- Índice de sitemaps (estilo Yoast SEO). robots.txt apunta aquí y Google sigue a los hijos.
-     Añade nuevos sitemaps hijos (p. ej. post-sitemap.xml) aquí cuando crees más tipos de contenido. -->
+<!-- Índice de sitemaps (estilo Yoast SEO). robots.txt apunta aquí y Google sigue a los hijos. -->
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <sitemap>
     <loc>https://jkdlegacy.com.au/page-sitemap.xml</loc>
-    <lastmod>2026-08-10T09:00:00+10:00</lastmod>
+    <lastmod>2026-10-25T09:00:00+11:00</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://jkdlegacy.com.au/landing-sitemap.xml</loc>
+    <lastmod>2026-10-25T09:00:00+11:00</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://jkdlegacy.com.au/post-sitemap.xml</loc>
+    <lastmod>2026-10-25T09:00:00+11:00</lastmod>
   </sitemap>
 </sitemapindex>

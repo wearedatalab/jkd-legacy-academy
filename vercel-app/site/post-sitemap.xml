@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>
+<!-- Artículos del blog. Generado por _seo/build.py -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>https://jkdlegacy.com.au/blog</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://jkdlegacy.com.au/blog"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://jkdlegacy.com.au/blog?lang=es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://jkdlegacy.com.au/blog"/>
+    <lastmod>2026-10-25T09:00:00+11:00</lastmod>
+  </url>
+  <url>
+    <loc>https://jkdlegacy.com.au/blog/what-is-jeet-kune-do</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://jkdlegacy.com.au/blog/what-is-jeet-kune-do"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://jkdlegacy.com.au/blog/what-is-jeet-kune-do?lang=es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://jkdlegacy.com.au/blog/what-is-jeet-kune-do"/>
+    <lastmod>2026-10-25T09:00:00+11:00</lastmod>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/bruce.webp</image:loc></image:image>
+  </url>
+  <url>
+    <loc>https://jkdlegacy.com.au/blog/first-jeet-kune-do-class</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://jkdlegacy.com.au/blog/first-jeet-kune-do-class"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://jkdlegacy.com.au/blog/first-jeet-kune-do-class?lang=es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://jkdlegacy.com.au/blog/first-jeet-kune-do-class"/>
+    <lastmod>2026-10-25T09:00:00+11:00</lastmod>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/ft-photo-correction.webp</image:loc></image:image>
+  </url>
+  <url>
+    <loc>https://jkdlegacy.com.au/blog/jeet-kune-do-vs-wing-chun</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://jkdlegacy.com.au/blog/jeet-kune-do-vs-wing-chun"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://jkdlegacy.com.au/blog/jeet-kune-do-vs-wing-chun?lang=es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://jkdlegacy.com.au/blog/jeet-kune-do-vs-wing-chun"/>
+    <lastmod>2026-10-25T09:00:00+11:00</lastmod>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/training-3.webp</image:loc></image:image>
+  </url>
+  <url>
+    <loc>https://jkdlegacy.com.au/blog/best-martial-art-for-self-defence</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://jkdlegacy.com.au/blog/best-martial-art-for-self-defence"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://jkdlegacy.com.au/blog/best-martial-art-for-self-defence?lang=es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://jkdlegacy.com.au/blog/best-martial-art-for-self-defence"/>
+    <lastmod>2026-10-25T09:00:00+11:00</lastmod>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/ft-photo-group.webp</image:loc></image:image>
+  </url>
+  <url>
+    <loc>https://jkdlegacy.com.au/blog/womens-self-defence-what-works</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://jkdlegacy.com.au/blog/womens-self-defence-what-works"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://jkdlegacy.com.au/blog/womens-self-defence-what-works?lang=es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://jkdlegacy.com.au/blog/womens-self-defence-what-works"/>
+    <lastmod>2026-10-25T09:00:00+11:00</lastmod>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/training-1.webp</image:loc></image:image>
+  </url>
+  <url>
+    <loc>https://jkdlegacy.com.au/blog/how-to-choose-self-defence-classes-melbourne</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://jkdlegacy.com.au/blog/how-to-choose-self-defence-classes-melbourne"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://jkdlegacy.com.au/blog/how-to-choose-self-defence-classes-melbourne?lang=es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://jkdlegacy.com.au/blog/how-to-choose-self-defence-classes-melbourne"/>
+    <lastmod>2026-10-25T09:00:00+11:00</lastmod>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/the-way-hero.webp</image:loc></image:image>
+  </url>
+  <url>
+    <loc>https://jkdlegacy.com.au/blog/is-jeet-kune-do-effective</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://jkdlegacy.com.au/blog/is-jeet-kune-do-effective"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://jkdlegacy.com.au/blog/is-jeet-kune-do-effective?lang=es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://jkdlegacy.com.au/blog/is-jeet-kune-do-effective"/>
+    <lastmod>2026-10-25T09:00:00+11:00</lastmod>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/the-way-hero.webp</image:loc></image:image>
+  </url>
+  <url>
+    <loc>https://jkdlegacy.com.au/blog/starting-martial-arts-as-an-adult</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://jkdlegacy.com.au/blog/starting-martial-arts-as-an-adult"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://jkdlegacy.com.au/blog/starting-martial-arts-as-an-adult?lang=es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://jkdlegacy.com.au/blog/starting-martial-arts-as-an-adult"/>
+    <lastmod>2026-10-25T09:00:00+11:00</lastmod>
+    <image:image><image:loc>https://jkdlegacy.com.au/images/ft-photo-group.webp</image:loc></image:image>
+  </url>
+</urlset>

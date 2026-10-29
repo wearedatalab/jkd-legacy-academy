@@ -28,6 +28,7 @@ const ICON = {
   eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>',
   redirect: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 10 20 15 15 20"/><path d="M4 4v7a4 4 0 0 0 4 4h12"/></svg>',
   config: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+  blog: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
   students: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>',
   tasks: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
 };
@@ -110,13 +111,14 @@ function renderLogin() {
 // ============================================================
 function renderApp() {
   // El comercial no ve Usuarios, Redirecciones ni Configuración
-  const ADMIN_VIEWS = ['users', 'redirects', 'config'];
+  const ADMIN_VIEWS = ['users', 'redirects', 'config', 'blog', 'postEdit'];
   const navItems = [
     ['kanban', 'Pipeline', ICON.kanban],
     ['leads', 'Leads', ICON.leads],
     ['tasks', 'Tasks', ICON.tasks],
     ['students', 'Students', ICON.students],
     ['stats', 'Statistics', ICON.stats],
+    ['blog', 'Blog', ICON.blog],
     ['users', 'Users', ICON.users],
     ['redirects', 'Redirects', ICON.redirect],
     ['config', 'Settings', ICON.config],
@@ -132,7 +134,7 @@ function renderApp() {
       </div>
       <nav id="nav">
         ${navItems.map(([k, label, icon]) => `
-          <button class="nav-item ${state.view === k || (state.view === 'leadDetail' && k === 'leads') ? 'active' : ''}" data-view="${k}">
+          <button class="nav-item ${state.view === k || (state.view === 'leadDetail' && k === 'leads') || (state.view === 'postEdit' && k === 'blog') ? 'active' : ''}" data-view="${k}">
             ${icon}<span>${label}</span>${k === 'leads' ? `<span class="badge" id="badge-leads"></span>` : k === 'tasks' ? `<span class="badge" id="badge-tasks"></span>` : ''}
           </button>`).join('')}
       </nav>
@@ -168,7 +170,7 @@ function renderApp() {
 
   $('#badge-leads').textContent = state.leads.length || '';
   paintTaskBadge();
-  const views = { kanban: viewKanban, leads: viewLeads, tasks: viewTasks, students: viewStudents, stats: viewStats, users: viewUsers, redirects: viewRedirects, config: viewSettings, leadDetail: () => viewLeadDetail(state.detailId) };
+  const views = { kanban: viewKanban, leads: viewLeads, tasks: viewTasks, students: viewStudents, stats: viewStats, users: viewUsers, redirects: viewRedirects, config: viewSettings, blog: viewBlog, postEdit: () => viewPostEdit(state.postId), leadDetail: () => viewLeadDetail(state.detailId) };
   (views[state.view] || viewKanban)();
 }
 
@@ -1264,6 +1266,300 @@ async function viewStats(month) {
   $('#stat-month')?.addEventListener('change', (e) => viewStats(e.target.value || undefined));
 }
 
+// ============================================================
+//  BLOG — artículos bilingües (EN/ES) servidos en /blog desde la BD
+// ============================================================
+const SITE_PAGES = [
+  ['/', 'Home'], ['/self-defence-classes-melbourne', 'Self-defence classes Melbourne'], ['/jeet-kune-do-melbourne', 'Jeet Kune Do Melbourne'],
+  ['/womens-self-defence-melbourne', "Women's self-defence"], ['/private-lessons-melbourne', 'Private lessons'], ['/jeet-kune-do-adelaide', 'Jeet Kune Do Adelaide'],
+  ['/affiliated-schools', 'JKD schools in Australia'], ['/legacy', 'Legacy (lineage)'], ['/the-way', 'The Way (timetable & prices)'], ['/free-trial', 'Free trial class'],
+];
+const wordsOf = (html) => (String(html || '').replace(/<[^>]+>/g, ' ').match(/\S+/g) || []).length;
+const slugify = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);
+
+async function viewBlog() {
+  const v = $('#view');
+  v.innerHTML = '<div class="empty">Loading…</div>';
+  let rows;
+  try { rows = await api('GET', '/api/posts'); } catch (e) { v.innerHTML = '<div class="empty"><div class="big">Restricted access</div>Only administrators can manage the blog.</div>'; return; }
+  const pub = rows.filter((r) => r.status === 'published').length;
+  v.innerHTML = `
+    <div class="topbar">
+      <div><span class="ey">Content · SEO</span><h1>Blog</h1></div>
+      <div class="tools">
+        <a class="btn btn-ghost btn-sm" href="/blog" target="_blank" rel="noopener">View blog ↗</a>
+        <button class="btn btn-primary btn-sm" id="new-post">+ New post</button>
+      </div>
+    </div>
+    <p class="blog-intro">${pub} published · ${rows.length - pub} draft. Each post has an English and a Spanish version (same URL with <code>?lang=es</code>). Published posts appear at <code>/blog</code>, in the sitemap and in <code>llms.txt</code> automatically.</p>
+    <div class="panel"><div id="post-table"></div></div>`;
+  $('#new-post').addEventListener('click', () => { location.hash = 'post-new'; });
+  const wrap = $('#post-table');
+  if (!rows.length) { wrap.innerHTML = '<div class="empty"><div class="big">No posts yet</div>Create the first one with “+ New post”.</div>'; return; }
+  wrap.innerHTML = `<table><thead><tr><th></th><th>Title</th><th>Category</th><th>Status</th><th>Spanish</th><th>Words</th><th>Updated</th><th></th></tr></thead><tbody>
+    ${rows.map((r) => `<tr class="post-row" data-id="${r.id}">
+      <td style="width:64px"><img class="post-thumb" src="${esc(r.image)}" alt=""></td>
+      <td><span class="lead-nm">${esc(r.title)}</span><div class="post-slug">/blog/${esc(r.slug)}</div></td>
+      <td>${esc(r.category)}</td>
+      <td><span class="status-pill ${r.status === 'published' ? 'st-ganado' : 'st-contactado'}">${r.status === 'published' ? 'Published' : 'Draft'}</span></td>
+      <td>${r.es_ready ? '<span style="color:var(--green)">● Ready</span>' : '<span style="color:var(--amber)">○ Missing</span>'}</td>
+      <td><span class="mono" style="color:var(--dim)">${r.words}</span></td>
+      <td>${fmtDate(r.updated_at)}</td>
+      <td style="text-align:right;white-space:nowrap">
+        <a class="btn btn-ghost btn-sm" href="/blog/${esc(r.slug)}${r.status === 'published' ? '' : '?preview=1'}" target="_blank" rel="noopener" data-stop>View</a>
+        <button class="btn btn-ghost btn-sm" data-edit="${r.id}">Edit</button>
+      </td>
+    </tr>`).join('')}
+  </tbody></table>`;
+  wrap.addEventListener('click', (e) => {
+    if (e.target.closest('[data-stop]')) return;
+    const row = e.target.closest('.post-row'); if (row) location.hash = 'post-' + row.dataset.id;
+  });
+}
+
+async function viewPostEdit(id) {
+  const v = $('#view');
+  v.innerHTML = '<div class="empty">Loading…</div>';
+  const isNew = id === 'new';
+  let post, meta, all;
+  try {
+    [meta, all, post] = await Promise.all([
+      api('GET', '/api/blog-images'), api('GET', '/api/posts'),
+      isNew ? Promise.resolve(null) : api('GET', `/api/posts/${id}`),
+    ]);
+  } catch (e) { v.innerHTML = '<div class="empty">Error loading the post.</div>'; return; }
+  post = post || { slug: '', status: 'draft', author: 'academy', category: 'Jeet Kune Do', image: '/images/training-3.webp', related: [], date_published: new Date().toISOString().slice(0, 10), en: {}, es: {} };
+  for (const l of ['en', 'es']) { post[l] = Object.assign({ faqs: [] }, post[l]); if (!Array.isArray(post[l].faqs)) post[l].faqs = []; }
+  let lang = 'en';
+  let slugTouched = !isNew;
+  let dirty = false;
+  const others = all.filter((x) => x.id !== post.id);
+
+  v.innerHTML = `
+    <div class="topbar">
+      <div><a class="back-link" href="#blog">← Blog</a><span class="ey">${isNew ? 'New post' : 'Edit post'}</span><h1 id="pe-title">${esc(post.en.h1 || 'Untitled post')}</h1></div>
+      <div class="tools">
+        ${isNew ? '' : `<a class="btn btn-ghost btn-sm" id="pe-view-en" target="_blank" rel="noopener">View EN ↗</a><a class="btn btn-ghost btn-sm" id="pe-view-es" target="_blank" rel="noopener">View ES ↗</a>`}
+        <button class="btn btn-primary btn-sm" id="pe-save">Save</button>
+      </div>
+    </div>
+    <div class="detail-grid">
+      <div class="detail-main">
+        <div class="card-box">
+          <div class="section-t">Post settings</div>
+          <div class="form-row">
+            <div class="field"><label>URL slug</label><div class="slug-wrap"><span>/blog/</span><input id="pe-slug" value="${esc(post.slug)}" placeholder="what-is-jeet-kune-do" spellcheck="false"></div></div>
+            <div class="field"><label>Status</label><select id="pe-status"><option value="draft" ${post.status !== 'published' ? 'selected' : ''}>Draft (hidden)</option><option value="published" ${post.status === 'published' ? 'selected' : ''}>Published</option></select></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Category</label><select id="pe-category">${Object.keys(meta.categories).map((c) => `<option ${post.category === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
+            <div class="field"><label>Publication date</label><input type="date" id="pe-date" value="${esc(post.date_published)}"></div>
+          </div>
+          <div class="field"><label>Author (byline)</label><select id="pe-author">
+            <option value="academy" ${post.author !== 'vargas' ? 'selected' : ''}>Jeet Kune Do Legacy Academy</option>
+            <option value="vargas" ${post.author === 'vargas' ? 'selected' : ''}>Sigung Ricardo Vargas — only once he has reviewed and approved the post</option>
+          </select><div class="field-help">Signing as Sigung Vargas adds his author box and marks him as the author for Google (E-E-A-T).</div></div>
+          <div class="field"><label>Header image</label>
+            <div class="img-pick"><img id="pe-img-prev" src="${esc(post.image)}" alt=""><select id="pe-image">${meta.images.map((im) => `<option value="${esc(im)}" ${post.image === im ? 'selected' : ''}>${esc(im.replace('/images/', ''))}</option>`).join('')}</select></div>
+            <div class="field-help">Images from the site's <code>/images</code> folder.</div>
+          </div>
+          <div class="field"><label>Related posts (“Keep reading”, up to 3)</label>
+            <div class="rel-list">${others.map((o) => `<label class="rel-item"><input type="checkbox" value="${esc(o.slug)}" ${post.related.includes(o.slug) ? 'checked' : ''}> ${esc(o.title)}</label>`).join('') || '<span class="field-help">No other posts yet.</span>'}</div>
+          </div>
+        </div>
+
+        <div class="lang-tabs" id="pe-tabs"><button type="button" data-l="en" class="active">English</button><button type="button" data-l="es">Español <span id="es-dot"></span></button></div>
+        <div class="card-box" id="pe-lang"></div>
+      </div>
+      <aside class="detail-side">
+        <div class="card-box"><div class="section-t">Google preview</div><div class="serp" id="pe-serp"></div></div>
+        <div class="card-box"><div class="section-t">SEO checklist</div><ul class="checklist" id="pe-check"></ul></div>
+        <div class="card-box"><div class="section-t">Writing tips</div>
+          <p class="tip">Open with the <b>quick answer</b>: 40–60 words that answer the main question on their own — Google and AI assistants quote it.</p>
+          <p class="tip">Use question-style <b>H2s</b> and answer each in its first sentence.</p>
+          <p class="tip">Link to 3+ site pages (landing pages, other posts) with the <b>Link to page</b> menu in the editor.</p>
+        </div>
+        ${isNew ? '' : '<button class="btn btn-ghost btn-sm danger" id="pe-del">Delete post</button>'}
+      </aside>
+    </div>`;
+
+  const L = () => post[lang];
+  const viewUrl = (l) => `/blog/${post.slug}${l === 'es' ? '?lang=es' : ''}${post.status === 'published' ? '' : (l === 'es' ? '&' : '?') + 'preview=1'}`;
+  function paintLinks() {
+    if (isNew) return;
+    $('#pe-view-en').href = viewUrl('en'); $('#pe-view-es').href = viewUrl('es');
+  }
+  function counter(n, min, max) { return `<span class="cnt ${n > max || (min && n < min) ? 'bad' : 'ok'}">${n}/${max}</span>`; }
+  function renderLang() {
+    const d = L();
+    $('#pe-lang').innerHTML = `
+      <div class="field"><label>SEO title ${counter((d.title || '').length, 30, 60)}</label><input data-f="title" value="${esc(d.title || '')}" placeholder="What Is Jeet Kune Do? Bruce Lee's Martial Art | JKD Legacy"></div>
+      <div class="field"><label>Meta description ${counter((d.metaDescription || '').length, 120, 160)}</label><textarea data-f="metaDescription" rows="2">${esc(d.metaDescription || '')}</textarea></div>
+      <div class="field"><label>H1 (headline on the page)</label><input data-f="h1" value="${esc(d.h1 || '')}"></div>
+      <div class="field"><label>Standfirst (1–2 sentences under the H1)</label><textarea data-f="dek" rows="2">${esc(d.dek || '')}</textarea></div>
+      <div class="field"><label>Quick answer <span class="cnt ${wordsOf(d.quickAnswer) < 40 || wordsOf(d.quickAnswer) > 60 ? 'bad' : 'ok'}">${wordsOf(d.quickAnswer)} words · 40–60</span></label><textarea data-f="quickAnswer" rows="3">${esc(d.quickAnswer || '')}</textarea></div>
+      <div class="field"><label>Body <span class="cnt">${wordsOf(d.bodyHtml)} words</span></label>
+        <div class="rte-bar" id="rte-bar">
+          <button type="button" data-cmd="formatBlock" data-val="H2" title="Heading 2">H2</button>
+          <button type="button" data-cmd="formatBlock" data-val="H3" title="Heading 3">H3</button>
+          <button type="button" data-cmd="formatBlock" data-val="P" title="Paragraph">¶</button>
+          <button type="button" data-cmd="bold" title="Bold"><b>B</b></button>
+          <button type="button" data-cmd="italic" title="Italic"><i>I</i></button>
+          <button type="button" data-cmd="insertUnorderedList" title="Bullet list">• List</button>
+          <button type="button" data-cmd="insertOrderedList" title="Numbered list">1. List</button>
+          <button type="button" data-cmd="formatBlock" data-val="BLOCKQUOTE" title="Quote">❝</button>
+          <button type="button" data-cmd="link" title="Link to a URL">Link</button>
+          <select id="rte-page" title="Link the selected text to a site page"><option value="">Link to page…</option>
+            <optgroup label="Pages">${SITE_PAGES.map(([h, n]) => `<option value="${h}">${esc(n)}</option>`).join('')}</optgroup>
+            <optgroup label="Posts">${all.filter((x) => x.status === 'published').map((x) => `<option value="/blog/${esc(x.slug)}">${esc(x.title)}</option>`).join('')}</optgroup>
+          </select>
+          <button type="button" data-cmd="unlink" title="Remove link">Unlink</button>
+          <button type="button" data-cmd="removeFormat" title="Clear formatting">Clear</button>
+          <button type="button" id="rte-html" class="rte-mode" title="Edit HTML">&lt;/&gt; HTML</button>
+        </div>
+        <div class="rte prose-admin" id="rte" contenteditable="true">${d.bodyHtml || '<p></p>'}</div>
+        <textarea class="rte-src hidden" id="rte-src" spellcheck="false"></textarea>
+        <div class="field-help">Links to site pages are kept in the same language automatically (the Spanish page links to the Spanish versions).</div>
+      </div>
+      <div class="field"><label>FAQ (shown at the end and marked up for Google)</label>
+        <div id="faq-list">${d.faqs.map((f, i) => `<div class="faq-ed" data-i="${i}"><input data-q value="${esc(f.q)}" placeholder="Question"><textarea data-a rows="2" placeholder="Answer (30–70 words, plain text)">${esc(f.a)}</textarea><button type="button" class="fbf-del" data-del title="Remove">✕</button></div>`).join('')}</div>
+        <button type="button" class="btn-add" id="faq-add">+ Add question</button>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Main keyword</label><input data-f="primaryKeyword" value="${esc(d.primaryKeyword || '')}"></div>
+        <div class="field"><label>Secondary keywords (comma-separated)</label><input data-f="secondaryKeywords" value="${esc((d.secondaryKeywords || []).join(', '))}"></div>
+      </div>
+      <div class="field"><label>Image alt text</label><input data-f="imageAlt" value="${esc(d.imageAlt || '')}" placeholder="Describe the header image"></div>
+      ${lang === 'es' ? '<button type="button" class="btn btn-ghost btn-sm" id="copy-en">Copy structure from English</button>' : ''}`;
+    bindLang();
+    paintSide();
+  }
+  function syncFaqs() {
+    L().faqs = [...document.querySelectorAll('#faq-list .faq-ed')].map((r) => ({ q: r.querySelector('[data-q]').value.trim(), a: r.querySelector('[data-a]').value.trim() }));
+  }
+  // Un solo listener en el contenedor (que persiste entre pestañas); el resto se re-enlaza en cada render
+  function bindHostOnce() {
+    $('#pe-lang').addEventListener('input', (e) => {
+      dirty = true;
+      const f = e.target.dataset.f;
+      if (f) {
+        L()[f] = f === 'secondaryKeywords' ? e.target.value.split(',').map((x) => x.trim()).filter(Boolean) : e.target.value;
+        if (f === 'h1' && lang === 'en') { $('#pe-title').textContent = e.target.value || 'Untitled post'; if (!slugTouched) { post.slug = slugify(e.target.value); $('#pe-slug').value = post.slug; } }
+        const lab = e.target.closest('.field').querySelector('.cnt');
+        if (lab && f === 'title') lab.outerHTML = counter(e.target.value.length, 30, 60);
+        if (lab && f === 'metaDescription') lab.outerHTML = counter(e.target.value.length, 120, 160);
+        if (lab && f === 'quickAnswer') { const n = wordsOf(e.target.value); lab.className = 'cnt ' + (n < 40 || n > 60 ? 'bad' : 'ok'); lab.textContent = `${n} words · 40–60`; }
+      }
+      if (e.target.closest('#faq-list')) syncFaqs();
+      if (e.target.id === 'rte') { L().bodyHtml = e.target.innerHTML; }
+      if (e.target.id === 'rte-src') { L().bodyHtml = e.target.value; }
+      if (e.target.id === 'rte' || e.target.id === 'rte-src') { const c = e.target.closest('.field').querySelector('.cnt'); if (c) c.textContent = wordsOf(L().bodyHtml) + ' words'; }
+      paintSide();
+    });
+  }
+  function bindLang() {
+    const rte = $('#rte');
+    rte.addEventListener('paste', (e) => {   // pega solo texto: evita el HTML basura de Word/Docs
+      e.preventDefault();
+      const t = (e.clipboardData || window.clipboardData).getData('text/plain');
+      document.execCommand('insertText', false, t);
+    });
+    $('#rte-bar').addEventListener('mousedown', (e) => { if (e.target.closest('button')) e.preventDefault(); });
+    $('#rte-bar').addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-cmd]'); if (!b) return;
+      rte.focus();
+      if (b.dataset.cmd === 'link') { const u = prompt('Link URL (https://… or /page)'); if (u) document.execCommand('createLink', false, u.trim()); }
+      else document.execCommand(b.dataset.cmd, false, b.dataset.val ? `<${b.dataset.val}>` : null);
+      L().bodyHtml = rte.innerHTML; dirty = true; paintSide();
+    });
+    let savedRange = null;
+    rte.addEventListener('blur', () => { const s = window.getSelection(); if (s.rangeCount && rte.contains(s.anchorNode)) savedRange = s.getRangeAt(0); });
+    $('#rte-page').addEventListener('change', (e) => {
+      const u = e.target.value; e.target.value = ''; if (!u) return;
+      rte.focus();
+      if (savedRange) { const s = window.getSelection(); s.removeAllRanges(); s.addRange(savedRange); }
+      if (window.getSelection().isCollapsed) { toast('Select the text to link first', 'err'); return; }
+      document.execCommand('createLink', false, u);
+      L().bodyHtml = rte.innerHTML; dirty = true; paintSide();
+    });
+    $('#rte-html').addEventListener('click', () => {
+      const src = $('#rte-src');
+      const toSrc = src.classList.contains('hidden');
+      if (toSrc) { src.value = L().bodyHtml || ''; src.style.height = Math.max(320, rte.offsetHeight) + 'px'; }
+      else { rte.innerHTML = src.value; L().bodyHtml = src.value; }
+      src.classList.toggle('hidden', !toSrc); rte.classList.toggle('hidden', toSrc);
+      $('#rte-html').classList.toggle('on', toSrc);
+    });
+    $('#faq-add').addEventListener('click', () => { syncFaqs(); L().faqs.push({ q: '', a: '' }); renderLang(); });
+    $('#faq-list').addEventListener('click', (e) => {
+      const d = e.target.closest('[data-del]'); if (!d) return;
+      syncFaqs(); L().faqs.splice(Number(d.closest('.faq-ed').dataset.i), 1); dirty = true; renderLang();
+    });
+    $('#copy-en')?.addEventListener('click', () => {
+      if ((L().bodyHtml || '').trim() && !confirm('Replace the Spanish body and FAQ with the English version (to translate it in place)?')) return;
+      L().bodyHtml = post.en.bodyHtml || ''; L().faqs = (post.en.faqs || []).map((f) => ({ ...f })); dirty = true; renderLang();
+    });
+  }
+  function paintSide() {
+    const d = L();
+    const t = d.title || d.h1 || 'Post title';
+    $('#pe-serp').innerHTML = `<div class="serp-url">jkdlegacy.com.au › blog › ${esc(post.slug || 'slug')}${lang === 'es' ? '?lang=es' : ''}</div><div class="serp-t">${esc(t.length > 62 ? t.slice(0, 60) + '…' : t)}</div><div class="serp-d">${esc((d.metaDescription || 'Meta description…').slice(0, 165))}</div>`;
+    const w = wordsOf(d.bodyHtml), qa = wordsOf(d.quickAnswer), links = (String(d.bodyHtml || '').match(/href="\/[^"]*"/g) || []).length;
+    const es = post.es || {};
+    const checks = [
+      [(d.title || '').length >= 30 && (d.title || '').length <= 60, 'SEO title 30–60 characters'],
+      [(d.metaDescription || '').length >= 120 && (d.metaDescription || '').length <= 160, 'Meta description 120–160 characters'],
+      [qa >= 40 && qa <= 60, 'Quick answer 40–60 words'],
+      [w >= 800, `Body 800+ words (${w})`],
+      [links >= 3, `3+ links to site pages (${links})`],
+      [(d.faqs || []).filter((f) => f.q && f.a).length >= 3, '3+ FAQ questions'],
+      [!!d.primaryKeyword && (d.title || '').toLowerCase().includes(d.primaryKeyword.toLowerCase().split(' ')[0]), 'Main keyword in the title'],
+      [!!d.imageAlt, 'Image alt text'],
+      [!!(es.title && es.bodyHtml), 'Spanish version complete'],
+    ];
+    $('#pe-check').innerHTML = checks.map(([ok, l]) => `<li class="${ok ? 'ok' : 'no'}">${ok ? '✓' : '○'} ${esc(l)}</li>`).join('');
+    $('#es-dot').textContent = es.title && es.bodyHtml ? '✓' : '';
+  }
+
+  $('#pe-tabs').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-l]'); if (!b || b.dataset.l === lang) return;
+    lang = b.dataset.l;
+    $('#pe-tabs').querySelectorAll('button').forEach((x) => x.classList.toggle('active', x.dataset.l === lang));
+    renderLang();
+  });
+  $('#pe-slug').addEventListener('input', (e) => { slugTouched = true; dirty = true; post.slug = slugify(e.target.value); paintSide(); });
+  $('#pe-slug').addEventListener('blur', (e) => { e.target.value = post.slug; });
+  $('#pe-status').addEventListener('change', (e) => { post.status = e.target.value; dirty = true; });
+  $('#pe-category').addEventListener('change', (e) => { post.category = e.target.value; dirty = true; });
+  $('#pe-date').addEventListener('change', (e) => { post.date_published = e.target.value; dirty = true; });
+  $('#pe-author').addEventListener('change', (e) => { post.author = e.target.value; dirty = true; });
+  $('#pe-image').addEventListener('change', (e) => { post.image = e.target.value; $('#pe-img-prev').src = post.image; dirty = true; });
+  v.querySelector('.rel-list')?.addEventListener('change', () => {
+    const sel = [...v.querySelectorAll('.rel-list input:checked')].map((x) => x.value);
+    if (sel.length > 3) { toast('Pick up to 3 related posts', 'err'); }
+    post.related = sel.slice(0, 3); dirty = true;
+  });
+  $('#pe-save').addEventListener('click', async () => {
+    const btn = $('#pe-save'); btn.disabled = true; btn.textContent = 'Saving…';
+    try {
+      const saved = isNew ? await api('POST', '/api/posts', post) : await api('PUT', `/api/posts/${post.id}`, post);
+      dirty = false; toast(post.status === 'published' ? 'Post saved and published' : 'Draft saved');
+      if (isNew) { location.hash = 'post-' + saved.id; return; }
+      Object.assign(post, saved); paintLinks();
+    } catch (e) { toast(e.message || 'Could not save', 'err'); }
+    btn.disabled = false; btn.textContent = 'Save';
+  });
+  $('#pe-del')?.addEventListener('click', async () => {
+    if (!confirm('Delete this post permanently? Its URL will return 404 (add a redirect if it had traffic).')) return;
+    try { await api('DELETE', `/api/posts/${post.id}`); dirty = false; toast('Post deleted'); location.hash = 'blog'; }
+    catch (e) { toast('Could not delete', 'err'); }
+  });
+  window.onbeforeunload = () => (dirty ? 'You have unsaved changes.' : undefined);
+  paintLinks();
+  bindHostOnce();
+  renderLang();
+}
+
 
 // ============================================================
 //  STUDENTS — fichas de membresía enviadas desde /membership-application
@@ -1373,8 +1669,11 @@ async function loadLeads() { state.leads = await api('GET', '/api/leads'); const
 function syncHash() {
   const h = location.hash.replace(/^#/, '');
   const m = h.match(/^lead-(\d+)$/);
+  const pm = h.match(/^post-(\d+|new)$/);
+  if (!pm) window.onbeforeunload = null;   // el aviso de cambios sin guardar es solo del editor de posts
   if (m) { state.detailId = Number(m[1]); state.view = 'leadDetail'; }
-  else if (['kanban', 'leads', 'tasks', 'students', 'stats', 'users', 'redirects', 'config'].includes(h)) { state.view = h; }
+  else if (pm) { state.postId = pm[1] === 'new' ? 'new' : Number(pm[1]); state.view = 'postEdit'; }
+  else if (['kanban', 'leads', 'tasks', 'students', 'stats', 'users', 'redirects', 'config', 'blog'].includes(h)) { state.view = h; }
   else if (state.view === 'leadDetail') { state.view = 'leads'; }
   renderApp();
 }

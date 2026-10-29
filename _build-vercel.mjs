@@ -1,6 +1,8 @@
 // Ensambla vercel-app/ (lo que Vercel despliega) desde los fuentes:
-//   - CRM  (jkd-legacy-crm): api/, lib/, vercel.json, package*.json  y  public/ -> webui/
-//   - Sitio (jkd-legacy-redesign) -> site/  (la función le inyecta el SEO)
+//   - CRM  (jkd-legacy-seo): api/, lib/, vercel.json, package*.json  y  public/ -> webui/
+//   - Sitio (jkd-legacy-seo/site, generado con `python -I _seo/build.py`) -> site/  (la función le inyecta el SEO)
+//   Desde el 28-oct-2026 la fuente de producción es jkd-legacy-seo (sitio SEO + landings + blog + CRM).
+//   jkd-legacy-redesign sigue siendo la base de las páginas originales que build.py copia y parchea.
 //   - Assets estáticos del sitio TAMBIÉN en la raíz -> los sirve el CDN de Vercel directo (rápido)
 // Uso:  node _build-vercel.mjs   (desde cualquier carpeta; usa rutas absolutas)
 // Root Directory en Vercel = vercel-app  (por eso este script en la raíz del repo NO afecta el build de Vercel).
@@ -8,8 +10,8 @@ import { rmSync, cpSync, mkdirSync, existsSync, writeFileSync, readdirSync } fro
 import path from 'node:path';
 
 const WEBS = 'C:\\Users\\donju\\Desktop\\Webs';
-const CRM = path.join(WEBS, 'jkd-legacy-crm');
-const SITE = path.join(WEBS, 'jkd-legacy-redesign');
+const CRM = path.join(WEBS, 'jkd-legacy-seo');
+const SITE = path.join(CRM, 'site');
 const REPO = 'C:\\Users\\donju\\Desktop\\jkd-legacy-academy';
 const OUT = path.join(REPO, 'vercel-app');
 
@@ -33,8 +35,9 @@ for (const f of ['api', 'lib', 'vercel.json', 'package.json', 'package-lock.json
 cpSync(path.join(CRM, 'public'), path.join(OUT, 'webui'), { recursive: true, filter: noHeavy });
 // Sitio de marketing -> site/  (la función lee el HTML de aquí y le inyecta el SEO)
 cpSync(SITE, path.join(OUT, 'site'), { recursive: true, filter: noHeavy });
+// (llms.txt y post-sitemap.xml NO: la función los arma desde la BD del blog)
 // Assets estáticos también en la RAÍZ -> los sirve el CDN de Vercel directo (no la función) = mucho más rápido
-for (const a of ['images', 'styles.css', 'script.js', 'i18n.js', 'analytics.js', 'robots.txt', 'sitemap.xml', 'page-sitemap.xml', 'sitemap.xsl', 'llms.txt', '_redirects']) {
+for (const a of ['images', 'styles.css', 'seo.css', 'script.js', 'i18n.js', 'analytics.js', 'robots.txt', 'sitemap.xml', 'page-sitemap.xml', 'landing-sitemap.xml', 'sitemap.xsl', '_redirects']) {
   const src = path.join(SITE, a);
   if (existsSync(src)) cpSync(src, path.join(OUT, a), { recursive: true, filter: noHeavy });
 }

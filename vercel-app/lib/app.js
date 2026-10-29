@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 import * as db from './db.js';
 import { sendMagicLink, sendLeadNotification, sendTaskReminder } from './email.js';
 import { validateMembership, membershipPdf } from './membership.js';
+import * as blog from './blog.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..');                      // …/jkd-legacy-crm (o raíz en Vercel)
@@ -234,6 +235,75 @@ async function ensureSettings() {
     if (changed) await db.run("UPDATE settings SET value=?, updated_at=? WHERE key='form_config'", [JSON.stringify(obj), nowISO()]);
   } catch (e) { /* noop */ }
 }
+// ---------------- Reseñas de Google ----------------
+// Ficha "Jeet Kune Do Legacy Academy" (Unit 6/72-80 Hampstead Rd, Maidstone). La API key va en la env
+// GOOGLE_PLACES_API_KEY (Places API "New" habilitada). Google entrega como máximo 5 reseñas por ficha.
+const GOOGLE_PLACE_ID = process.env.GOOGLE_PLACE_ID || 'ChIJ3cUhMY3FsGoRZUvifu6zReo';
+const REVIEWS_FALLBACK = {
+  source: 'summary', rating: 5, count: 24, reviews: [],
+  url: 'https://www.google.com/maps/search/?api=1&query=Jeet+Kune+Do+Legacy+Academy&query_place_id=' + GOOGLE_PLACE_ID,
+  writeUrl: 'https://search.google.com/local/writereview?placeid=' + GOOGLE_PLACE_ID,
+};
+const REVIEWS_TTL = 12 * 3600 * 1000;
+let reviewsMem = null;
+async function googleReviews() {
+  if (reviewsMem && Date.now() - reviewsMem.at < REVIEWS_TTL) return reviewsMem.data;
+  // Caché persistente en settings (sirve entre invocaciones serverless)
+  try {
+    const row = await db.get("SELECT value FROM settings WHERE key='google_reviews_cache'");
+    if (row && row.value) {
+      const c = JSON.parse(row.value);
+      if (Date.now() - c.at < REVIEWS_TTL) { reviewsMem = c; return c.data; }
+    }
+  } catch (e) {}
+  const key = process.env.GOOGLE_PLACES_API_KEY;
+  if (!key) return REVIEWS_FALLBACK;
+  try {
+    const r = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(GOOGLE_PLACE_ID)}?languageCode=en`, {
+      headers: { 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': 'rating,userRatingCount,reviews,googleMapsUri' },
+      signal: AbortSignal.timeout(6000),
+    });
+    if (!r.ok) throw new Error('places ' + r.status);
+    const d = await r.json();
+    const data = {
+      source: 'google', rating: d.rating || REVIEWS_FALLBACK.rating, count: d.userRatingCount || REVIEWS_FALLBACK.count,
+      url: d.googleMapsUri || REVIEWS_FALLBACK.url, writeUrl: REVIEWS_FALLBACK.writeUrl,
+      reviews: (d.reviews || []).filter((v) => v.rating >= 4 && (v.originalText || v.text)).map((v) => ({
+        author: v.authorAttribution?.displayName || 'Google user',
+        authorUrl: v.authorAttribution?.uri || '', photo: v.authorAttribution?.photoUri || '',
+        rating: v.rating, text: (v.originalText || v.text).text, when: v.relativePublishTimeDescription || '',
+        url: v.googleMapsUri || '',
+      })),
+    };
+    reviewsMem = { at: Date.now(), data };
+    try { await db.run("INSERT INTO settings (key,value,updated_at) VALUES ('google_reviews_cache',?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at", [JSON.stringify(reviewsMem), nowISO()]); } catch (e) {}
+    return data;
+  } catch (e) {
+    console.error('Google reviews:', e?.message || e);
+    return REVIEWS_FALLBACK;
+  }
+}
+
+// Reseñas escritas en el HTML del servidor (Google y los rastreadores de IA no ejecutan el fetch del navegador)
+async function withReviews(html, lang) {
+  const GRID = /(<div class="reviews-grid" data-reviews-grid(?:="")?>)<\/div>/;   // en las páginas ES (BeautifulSoup) el atributo sale como =""
+  if (!GRID.test(html)) return html;
+  let d; try { d = await googleReviews(); } catch (e) { return html; }
+  const es = lang === 'es';
+  const e = (s) => String(s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const https = (u) => (/^https:\/\//.test(u || '') ? u : '');
+  let out = html.replace(/<strong class="rv-rating">[^<]*<\/strong>/g, `<strong class="rv-rating">${Number(d.rating || 5).toFixed(1)}</strong>`)
+    .replace(/<span class="rv-count">[^<]*<\/span>/g, `<span class="rv-count">${d.count} ${es ? 'reseñas en Google' : 'reviews on Google'}</span>`);
+  if (!d.reviews || !d.reviews.length) return out;
+  const cards = d.reviews.slice(0, 5).map((v) => {
+    const photo = https(v.photo) ? `<img src="${e(v.photo)}" alt="" width="40" height="40" loading="lazy" referrerpolicy="no-referrer">` : `<span class="rv-initial" aria-hidden="true">${e((v.author || '?').trim().charAt(0).toUpperCase())}</span>`;
+    const name = https(v.authorUrl) ? `<a href="${e(v.authorUrl)}" target="_blank" rel="noopener noreferrer">${e(v.author)}</a>` : e(v.author);
+    const more = https(v.url) ? `<a class="rv-more" href="${e(v.url)}" target="_blank" rel="noopener noreferrer">${es ? 'Leer en Google' : 'Read on Google'}</a>` : '';
+    return `<figure class="review-card"><div class="rv-stars" aria-label="${v.rating} / 5">${'★'.repeat(v.rating)}${'☆'.repeat(5 - v.rating)}</div><blockquote>${e(v.text)}</blockquote>${more}<figcaption>${photo}<span><strong>${name}</strong><small>${e(v.when)} · Google</small></span></figcaption></figure>`;
+  }).join('');
+  return out.replace(GRID, (m, open) => `${open}${cards}</div>`).replace('class="section reviews"', 'class="section reviews has-reviews"');
+}
+
 // Ficha de membresía guardada → objeto con data parseada; PDF como descarga
 function membershipRow(row) { let data = {}; try { data = JSON.parse(row.data || '{}'); } catch (e) {} return { ...row, data }; }
 function sendMembershipPdf(res, row) {
@@ -290,9 +360,12 @@ const MIGRATION_REDIRECTS = {
   '/category/uncategorized': '/',
 };
 // Páginas reales del sitio nuevo (para no redirigirlas por error y para el fallback de "primer segmento").
-const REAL_PAGES = ['legacy', 'the-way', 'join-the-family', 'thanks', 'free-trial', 'privacy'];
-// Landings de pauta: solo en inglés y noindex → sin hreflang/og:locale alternativos.
+const SEO_LANDINGS = ['self-defence-classes-melbourne', 'jeet-kune-do-melbourne', 'womens-self-defence-melbourne', 'private-lessons-melbourne', 'jeet-kune-do-adelaide', 'affiliated-schools'];
+const REAL_PAGES = ['legacy', 'the-way', 'join-the-family', 'thanks', 'free-trial', 'privacy', ...SEO_LANDINGS];
+// Páginas solo en inglés (landing de pauta y privacidad) → sin hreflang/og:locale alternativos.
+// Las landings SEO y el blog son bilingües: la versión ?lang=es es un HTML propio (<página>.es.html).
 const EN_ONLY_PAGES = ['/free-trial', '/privacy', '/membership-application'];
+const isEnOnly = (p) => EN_ONLY_PAGES.includes(p);
 // Destino de migración para CUALQUIER ruta vieja (incluye assets .js, rutas con // dobles,
 // /feed, /author, /category, /tag, archivos de fecha /2019/10/, wp-*, etc.). Devuelve null si no aplica.
 // Manda a una página ÚTIL del sitio nuevo; la basura de WordPress sin equivalente va al home.
@@ -330,37 +403,54 @@ const GEO_META =
   '<meta name="geo.placename" content="Maidstone, Melbourne">' +
   '<meta name="geo.position" content="-37.7774;144.8776">' +
   '<meta name="ICBM" content="-37.7774, 144.8776">';
-const SOCIALS = ['https://www.facebook.com/RicardoVargasJeetKuneDo/', 'https://www.instagram.com/jkdaustralia/', 'https://www.youtube.com/@RicardoVargasJKD'];
+// sameAs: perfiles oficiales; incluye el Perfil de Empresa de Google (Place ID de la ficha de Maidstone).
+// Sumar aquí cada directorio nuevo (lessons.com.au, Yelp, Apple Business Connect…) a medida que se cree.
+const SOCIALS = ['https://www.facebook.com/RicardoVargasJeetKuneDo/', 'https://www.instagram.com/jkdaustralia/', 'https://www.youtube.com/@RicardoVargasJKD',
+  'https://www.google.com/maps/place/?q=place_id:ChIJ3cUhMY3FsGoRZUvifu6zReo'];
 const ORG_ID = SITE_ORIGIN + '/#academy';
 const FOUNDER_ID = SITE_ORIGIN + '/#sigung-ricardo-vargas';
 const ADELAIDE_ID = SITE_ORIGIN + '/#adelaide-kwoon';
 const JSON_LD = '<script type="application/ld+json">' + JSON.stringify({
   '@context': 'https://schema.org',
   '@graph': [
-    { '@type': 'WebSite', '@id': SITE_ORIGIN + '/#website', url: SITE_ORIGIN + '/', name: 'The JKD Legacy Academy', inLanguage: ['en-AU', 'es'], publisher: { '@id': ORG_ID } },
+    { '@type': 'WebSite', '@id': SITE_ORIGIN + '/#website', url: SITE_ORIGIN + '/', name: 'Jeet Kune Do Legacy Academy', alternateName: 'JKD Legacy', inLanguage: ['en-AU', 'es'], publisher: { '@id': ORG_ID } },
     {
       '@type': ['SportsActivityLocation', 'SportsClub', 'LocalBusiness'], '@id': ORG_ID,
-      name: 'The JKD Legacy Academy', alternateName: 'JKD Legacy',
-      description: "Authentic Jeet Kune Do — Bruce Lee's direct lineage — taught in Melbourne (Maidstone, inner-west) and Adelaide under Sigung Ricardo Vargas. A private-membership Kwoon for committed students.",
+      name: 'Jeet Kune Do Legacy Academy', alternateName: ['JKD Legacy', 'JKD Legacy Academy'],
+      description: "Jeet Kune Do and practical self-defence classes for teens (14+) and adults in Maidstone, inner-west Melbourne, taught in Bruce Lee's direct lineage by Sigung Ricardo Vargas. First class free.",
+      openingHoursSpecification: [
+        { '@type': 'OpeningHoursSpecification', dayOfWeek: ['https://schema.org/Tuesday', 'https://schema.org/Thursday'], opens: '19:00', closes: '20:00' },
+        { '@type': 'OpeningHoursSpecification', dayOfWeek: 'https://schema.org/Saturday', opens: '09:30', closes: '10:30' },
+      ],
+      isAccessibleForFree: false, publicAccess: false,
+      amenityFeature: [{ '@type': 'LocationFeatureSpecification', name: 'Free parking', value: true }],
       url: SITE_ORIGIN + '/', telephone: '+61459785073', email: 'jkdaustralia@gmail.com',
       image: { '@type': 'ImageObject', url: SITE_ORIGIN + '/images/og-image.jpg', width: 1200, height: 630 },
       logo: { '@type': 'ImageObject', url: SITE_ORIGIN + '/images/logo-horizontal.png' },
       priceRange: 'A$175-A$650', currenciesAccepted: 'AUD', sport: 'Jeet Kune Do',
       slogan: 'Under the sky, under the heavens, there is but one family.', foundingDate: '2011',
-      knowsAbout: ['Jeet Kune Do', 'Bruce Lee', 'Jun Fan Gung Fu', 'Martial arts', 'Self-defence', 'Trapping', 'Kickboxing'],
+      knowsAbout: ['Jeet Kune Do', 'Bruce Lee', 'Jun Fan Gung Fu', 'Martial arts', 'Self-defence', "Women's self-defence", 'Trapping', 'Kickboxing'],
       address: { '@type': 'PostalAddress', streetAddress: 'Unit 6 / 72-80 Hampstead Rd', addressLocality: 'Maidstone', addressRegion: 'VIC', postalCode: '3012', addressCountry: 'AU' },
       geo: { '@type': 'GeoCoordinates', latitude: -37.7774, longitude: 144.8776 },
       hasMap: 'https://www.google.com/maps?q=Unit%206%2F72-80%20Hampstead%20Rd%2C%20Maidstone%20VIC%203012',
-      areaServed: ['Maidstone', 'Maribyrnong', 'Footscray', 'Yarraville', 'Sunshine', 'West Footscray', 'Melbourne', 'Adelaide'].map((n) => ({ '@type': 'Place', name: n })),
-      sameAs: SOCIALS, founder: { '@id': FOUNDER_ID }, subOrganization: { '@id': ADELAIDE_ID },
+      areaServed: ['Maidstone', 'Maribyrnong', 'Footscray', 'Yarraville', 'Sunshine', 'West Footscray', 'Avondale Heights', 'Essendon', 'Moonee Ponds', 'Brunswick', 'Broadmeadows', 'Melbourne'].map((n) => ({ '@type': 'Place', name: n })),
+      sameAs: SOCIALS, founder: { '@id': FOUNDER_ID },
+      // Las escuelas de Adelaide, St Albans y Templestowe son afiliadas independientes (no empleados ni sedes propias)
       employee: [
         { '@id': FOUNDER_ID },
-        { '@type': 'Person', name: 'Sifu Peter Pitrakkos', jobTitle: 'Jeet Kune Do Instructor', worksFor: { '@id': ORG_ID } },
-        { '@type': 'Person', name: 'Sifu Thomas Pham', jobTitle: 'Jeet Kune Do Instructor', worksFor: { '@id': ORG_ID } },
         { '@type': 'Person', name: 'Sifu Paul Chiaravalle', jobTitle: 'Jeet Kune Do Instructor', worksFor: { '@id': ORG_ID } },
-        { '@type': 'Person', name: 'Sifu Mattia Riccardi', jobTitle: 'Jeet Kune Do Instructor', worksFor: { '@id': ORG_ID } },
         { '@type': 'Person', name: 'Sifu Neko Tobías', jobTitle: 'Jeet Kune Do Instructor', worksFor: { '@id': ORG_ID } },
       ],
+      hasOfferCatalog: {
+        '@type': 'OfferCatalog', name: 'Classes',
+        itemListElement: [
+          { '@type': 'Offer', itemOffered: { '@type': 'Service', name: 'Self-defence classes', url: SITE_ORIGIN + '/self-defence-classes-melbourne' } },
+          { '@type': 'Offer', itemOffered: { '@type': 'Service', name: 'Jeet Kune Do classes', url: SITE_ORIGIN + '/jeet-kune-do-melbourne' } },
+          { '@type': 'Offer', itemOffered: { '@type': 'Service', name: "Women's self-defence", url: SITE_ORIGIN + '/womens-self-defence-melbourne' } },
+          { '@type': 'Offer', itemOffered: { '@type': 'Service', name: 'Private lessons', url: SITE_ORIGIN + '/private-lessons-melbourne' } },
+          { '@type': 'Offer', name: 'Free trial class', price: '0', priceCurrency: 'AUD', url: SITE_ORIGIN + '/free-trial' },
+        ],
+      },
       makesOffer: [
         { '@type': 'Offer', name: '3-Month Unlimited Membership', price: '650', priceCurrency: 'AUD', category: 'Membership', url: SITE_ORIGIN + '/the-way' },
         { '@type': 'Offer', name: 'Monthly Unlimited Membership', price: '240', priceCurrency: 'AUD', category: 'Membership', url: SITE_ORIGIN + '/the-way' },
@@ -374,16 +464,16 @@ const JSON_LD = '<script type="application/ld+json">' + JSON.stringify({
       knowsAbout: ['Jeet Kune Do', 'Bruce Lee', 'Jun Fan Gung Fu'],
       sameAs: ['https://www.facebook.com/RicardoVargasJeetKuneDo/', 'https://www.youtube.com/@RicardoVargasJKD'],
       description: 'Second-generation Jeet Kune Do instructor certified by Sifu Jerry Poteet and Sigung Richard Bustillo, both direct students of Bruce Lee.',
+      award: 'U.S. Martial Arts Hall of Fame — Outstanding Martial Artist of the Year (2013)', image: SITE_ORIGIN + '/images/vargas-bridge.jpg', url: SITE_ORIGIN + '/legacy',
     },
     {
-      '@type': ['SportsActivityLocation', 'LocalBusiness'], '@id': ADELAIDE_ID,
-      name: 'The JKD Legacy Academy — Adelaide Kwoon', alternateName: 'JKD Legacy Adelaide',
-      description: 'The Adelaide Kwoon of The JKD Legacy Academy — the original Australian JKD Legacy school, established 2011 — led by Sifu Peter Pitrakkos.',
-      parentOrganization: { '@id': ORG_ID }, url: SITE_ORIGIN + '/join-the-family',
-      telephone: '+61411268793', sport: 'Jeet Kune Do', foundingDate: '2011',
-      address: { '@type': 'PostalAddress', addressLocality: 'Adelaide', addressRegion: 'SA', addressCountry: 'AU' },
-      areaServed: { '@type': 'Place', name: 'Adelaide' },
-      employee: { '@type': 'Person', name: 'Sifu Peter Pitrakkos', jobTitle: 'Head Instructor (Adelaide)' },
+      '@type': 'SportsClub', '@id': ADELAIDE_ID,
+      name: 'Jeet Kune Do with Sifu Peter Pitrakkos (Adelaide)',
+      description: 'Independent Jeet Kune Do school in Adelaide, affiliated with Jeet Kune Do Legacy Academy and led by Sifu Peter Pitrakkos. JKD Legacy began in Adelaide in 2011.',
+      url: SITE_ORIGIN + '/jeet-kune-do-adelaide', telephone: '+61411268793', email: 'pitrakkosjkd@gmail.com', sport: 'Jeet Kune Do',
+      memberOf: { '@id': ORG_ID },
+      areaServed: { '@type': 'City', name: 'Adelaide' },
+      employee: { '@type': 'Person', name: 'Sifu Peter Pitrakkos', jobTitle: 'Jeet Kune Do Instructor' },
     },
     { '@type': 'Course', '@id': SITE_ORIGIN + '/#course-foundation', name: 'Foundation', description: 'A 12-week beginner program in authentic Jeet Kune Do. No experience required; every session includes one-on-one corrections.', provider: { '@id': ORG_ID }, inLanguage: 'en', educationalLevel: 'Beginner', hasCourseInstance: { '@type': 'CourseInstance', courseMode: 'Onsite', courseWorkload: 'P12W', location: { '@id': ORG_ID } } },
     { '@type': 'Course', '@id': SITE_ORIGIN + '/#course-progression', name: 'Progression', description: 'The intermediate pathway: developing students refine timing, trapping and energy in the Jeet Kune Do method of Bruce Lee.', provider: { '@id': ORG_ID }, inLanguage: 'en', educationalLevel: 'Intermediate', hasCourseInstance: { '@type': 'CourseInstance', courseMode: 'Onsite', location: { '@id': ORG_ID } } },
@@ -402,7 +492,7 @@ async function injectHead(html, seo) {
   if (!/<meta\s+name=["']robots["']/i.test(html)) {
     head += '<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">';
   }
-  if (EN_ONLY_PAGES.includes(seo.path)) {
+  if (isEnOnly(seo.path)) {
     head += `<meta property="og:url" content="${enUrl}"><meta property="og:locale" content="en_AU">`;
   } else {
     head += `<link rel="alternate" hreflang="en" href="${enUrl}"><link rel="alternate" hreflang="en-AU" href="${enUrl}"><link rel="alternate" hreflang="es" href="${esUrl}"><link rel="alternate" hreflang="x-default" href="${enUrl}">`;
@@ -429,9 +519,11 @@ async function injectHead(html, seo) {
   out = out.replace(/(<link rel="canonical" href=")[^"]*(">)/, `$1${canon}$2`);
   if (isEs) out = out.replace('<html lang="en">', '<html lang="es">');
   const v = (n) => ASSET_VER || (() => { try { return Math.floor(fs.statSync(path.join(SITE_DIR, n)).mtimeMs); } catch (e) { return '1'; } })();
-  out = out.replace('href="styles.css"', 'href="styles.css?v=' + v('styles.css') + '"')
+  // Las páginas nuevas (landings y blog, que viven también en /blog/…) usan rutas absolutas
+  out = out.replace(/href="(\/?)styles\.css"/, (m, s) => 'href="' + s + 'styles.css?v=' + v('styles.css') + '"')
+    .replace(/href="(\/?)seo\.css"/, (m, s) => 'href="' + s + 'seo.css?v=' + v('seo.css') + '"')
     .replace('src="i18n.js"', 'src="i18n.js?v=' + v('i18n.js') + '"')
-    .replace('src="script.js"', 'src="script.js?v=' + v('script.js') + '"')
+    .replace(/src="(\/?)script\.js"/, (m, s) => 'src="' + s + 'script.js?v=' + v('script.js') + '"')
     .replace('src="/analytics.js"', 'src="/analytics.js?v=' + v('analytics.js') + '"');
   return out;
 }
@@ -596,6 +688,14 @@ export async function handle(req, res) {
   if (isCrm) p = p.slice(4) || '/';
   setSecurityHeaders(res, isCrm);
 
+  // Túnel de Cloudflare (cloudflared) hacia el servidor LOCAL para compartir la vista previa:
+  // nunca indexable, sin etiquetas de medición y sin el enlace de acceso en pantalla del modo demo.
+  const viaTunnel = !IS_PROD && (!!req.headers['cf-connecting-ip'] || !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(reqHost));
+  if (viaTunnel) {
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+    if (p === '/robots.txt') { res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-cache' }); return res.end('# Vista previa privada: no indexar\nUser-agent: *\nDisallow: /\n'); }
+  }
+
   // Redirecciones administrables (CRM → Redirecciones): páginas del sitio público, GET/HEAD
   if (!isCrm && (method === 'GET' || method === 'HEAD') && !p.startsWith('/api/')) {
     const ext = path.extname(p);
@@ -659,7 +759,13 @@ export async function handle(req, res) {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     res.setHeader('Cache-Control', 'no-cache');
     if (method === 'OPTIONS') return send(res, 204, '');
-    return json(res, 200, publicSiteConfig(await getAllSettings()));
+    return json(res, 200, viaTunnel ? { enabled: false } : publicSiteConfig(await getAllSettings()));
+  }
+
+  // Reseñas de Google (Places API New) con caché de 12 h; sin clave devuelve solo el resumen
+  if (p === '/api/public/reviews' && method === 'GET') {
+    res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400');
+    return json(res, 200, await googleReviews());
   }
 
   // Ficha de membresía (página privada /membership-application): guarda la ficha y entrega el PDF diligenciado
@@ -739,7 +845,7 @@ export async function handle(req, res) {
     if (!(await rateOk(`auth:${clientIp(req)}`, 6, 900))) return json(res, 429, { error: 'Too many attempts. Please wait a few minutes.' });
     const b = await readBody(req);
     const r = await requestMagicLink(String(b.email || ''), baseUrl(req));
-    return json(res, 200, { ok: true, ...(!IS_PROD && r.ok ? { devLink: r.link } : {}) });
+    return json(res, 200, { ok: true, ...(!IS_PROD && !viaTunnel && r.ok ? { devLink: r.link } : {}) });
   }
   // Magic-link landing. El GET muestra un interstitial y NO consume el token (así un
   // escáner/prefetch del correo no lo quema). El POST del botón sí lo confirma.
@@ -1004,6 +1110,40 @@ export async function handle(req, res) {
       return json(res, 200, await getAllSettings());
     }
 
+    // Blog (solo admin): artículos bilingües guardados en la BD
+    if (p === '/api/posts' || p.startsWith('/api/posts/') || p === '/api/blog-images') {
+      if (user.role !== 'admin') return json(res, 403, { error: 'admin only' });
+      if (p === '/api/blog-images' && method === 'GET') return json(res, 200, { images: blog.siteImages(SITE_DIR), categories: blog.CATEGORIES });
+      if (p === '/api/posts' && method === 'GET') {
+        const all = await blog.listPosts(false);
+        return json(res, 200, all.map((x) => ({
+          id: x.id, slug: x.slug, status: x.status, category: x.category, image: x.image, date_published: x.date_published, updated_at: x.updated_at,
+          title: x.en.h1 || x.en.title, title_es: x.es.h1 || '', es_ready: !!(x.es.title && x.es.bodyHtml), words: blog.wordCount(x.en.bodyHtml),
+        })));
+      }
+      if (p === '/api/posts' && method === 'POST') {
+        const v = blog.validatePost(await readBody(req));
+        if (v.error) return json(res, 400, { error: v.error });
+        const r = await blog.savePost(0, v);
+        return r.error ? json(res, 409, { error: r.error }) : json(res, 201, r.post);
+      }
+      const pm = p.match(/^\/api\/posts\/(\d+)$/);
+      if (pm) {
+        const id = Number(pm[1]);
+        const cur = await blog.getPostBy('id', id);
+        if (!cur) return json(res, 404, { error: 'post not found' });
+        if (method === 'GET') return json(res, 200, cur);
+        if (method === 'PUT') {
+          const v = blog.validatePost(await readBody(req));
+          if (v.error) return json(res, 400, { error: v.error });
+          const r = await blog.savePost(id, v);
+          return r.error ? json(res, 409, { error: r.error }) : json(res, 200, r.post);
+        }
+        if (method === 'DELETE') { await blog.deletePost(id); return json(res, 200, { ok: true }); }
+      }
+      return json(res, 404, { error: 'no route' });
+    }
+
     // Fichas de membresía (CRM → Students). Contienen datos de salud: solo personal con sesión; borrar, solo admin
     if (p === '/api/memberships' && method === 'GET') {
       const rows = await db.all('SELECT * FROM memberships ORDER BY datetime(created_at) DESC LIMIT 2000');
@@ -1074,15 +1214,40 @@ export async function handle(req, res) {
   const gz = /\bgzip\b/.test(req.headers['accept-encoding'] || '');
   if (isCrm) return serveStatic(res, p, PUBLIC_DIR, true, gz, false, null);
   const lang = url.searchParams.get('lang') === 'es' ? 'es' : 'en';
+
+  // ---- Blog administrable (CRM → Blog): índice, artículos, sitemap y llms.txt salen de la BD ----
+  if (method === 'GET' || method === 'HEAD') {
+    const bm = p.match(/^\/blog(?:\/([a-z0-9-]+))?$/);
+    if (bm) {
+      let preview = false;
+      if (bm[1] && url.searchParams.get('preview') === '1') { const u = await currentUser(req); preview = !!(u && u.role === 'admin'); }
+      const html = bm[1] ? await blog.renderPost(SITE_DIR, bm[1], lang, preview) : await blog.renderIndex(SITE_DIR, lang);
+      if (!html) return serve404(res);
+      const out = Buffer.from(await injectHead(html, { lang, path: p }), 'utf8');
+      if (preview) { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }); return res.end(out); }
+      return sendFile(res, '.html', out, gz, true);
+    }
+    if (p === '/post-sitemap.xml') return sendFile(res, '.xml', Buffer.from(await blog.postSitemap(), 'utf8'), gz, true);
+    if (p === '/llms.txt') {
+      let txt = ''; try { txt = await fs.promises.readFile(path.join(SITE_DIR, 'llms.txt'), 'utf8'); } catch (e) {}
+      return sendFile(res, '.txt', Buffer.from(await blog.llmsGuides(txt), 'utf8'), gz, true);
+    }
+  }
   if (p === '/membership-application') res.setHeader('X-Robots-Tag', 'noindex, nofollow');   // página privada para alumnos
   return serveStatic(res, p, SITE_DIR, false, gz, true, { lang, path: p });
 }
 
 async function serveStatic(res, p, dir, spa, gz, longCache, seo) {
   let rel = p === '/' ? 'index.html' : decodeURIComponent(p.replace(/^\/+/, '')).replace(/\/$/, '');
+  // Las versiones en español generadas (.es.html) solo se sirven vía ?lang=es, nunca por su nombre de archivo
+  if (/\.es(\.html)?$/.test(rel)) return serve404(res);
   if (rel && !path.extname(rel)) {
     const cand = path.join(dir, rel + '.html');
     if (cand.startsWith(dir) && fs.existsSync(cand)) rel = rel + '.html';
+  }
+  if (seo && seo.lang === 'es' && rel.endsWith('.html')) {
+    const esCand = path.join(dir, rel.replace(/\.html$/, '.es.html'));
+    if (esCand.startsWith(dir) && fs.existsSync(esCand)) rel = rel.replace(/\.html$/, '.es.html');
   }
   const full = path.join(dir, rel || 'index.html');
   if (!full.startsWith(dir)) return send(res, 403, 'forbidden');
@@ -1093,7 +1258,7 @@ async function serveStatic(res, p, dir, spa, gz, longCache, seo) {
     return serve404(res);
   }
   const ext = path.extname(full).toLowerCase();
-  if (dir === SITE_DIR && ext === '.html') buf = Buffer.from(await injectHead(buf.toString('utf8'), seo), 'utf8');
+  if (dir === SITE_DIR && ext === '.html') buf = Buffer.from(await withReviews(await injectHead(buf.toString('utf8'), seo), seo && seo.lang), 'utf8');
   return sendFile(res, ext, buf, gz, longCache);
 }
 function sendFile(res, ext, buf, gz, longCache) {

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>
+<!-- Landings locales (EN + ES con ?lang=es). Generado por _seo/build.py -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://jkdlegacy.com.au/self-defence-classes-melbourne</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://jkdlegacy.com.au/self-defence-classes-melbourne"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://jkdlegacy.com.au/self-defence-classes-melbourne?lang=es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://jkdlegacy.com.au/self-defence-classes-melbourne"/>
+    <lastmod>2026-10-25T09:00:00+11:00</lastmod>
+  </url>
+  <url>
+    <loc>https://jkdlegacy.com.au/jeet-kune-do-melbourne</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://jkdlegacy.com.au/jeet-kune-do-melbourne"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://jkdlegacy.com.au/jeet-kune-do-melbourne?lang=es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://jkdlegacy.com.au/jeet-kune-do-melbourne"/>
+    <lastmod>2026-10-25T09:00:00+11:00</lastmod>
+  </url>
+  <url>
+    <loc>https://jkdlegacy.com.au/womens-self-defence-melbourne</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://jkdlegacy.com.au/womens-self-defence-melbourne"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://jkdlegacy.com.au/womens-self-defence-melbourne?lang=es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://jkdlegacy.com.au/womens-self-defence-melbourne"/>
+    <lastmod>2026-10-25T09:00:00+11:00</lastmod>
+  </url>
+  <url>
+    <loc>https://jkdlegacy.com.au/private-lessons-melbourne</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://jkdlegacy.com.au/private-lessons-melbourne"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://jkdlegacy.com.au/private-lessons-melbourne?lang=es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://jkdlegacy.com.au/private-lessons-melbourne"/>
+    <lastmod>2026-10-25T09:00:00+11:00</lastmod>
+  </url>
+  <url>
+    <loc>https://jkdlegacy.com.au/jeet-kune-do-adelaide</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://jkdlegacy.com.au/jeet-kune-do-adelaide"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://jkdlegacy.com.au/jeet-kune-do-adelaide?lang=es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://jkdlegacy.com.au/jeet-kune-do-adelaide"/>
+    <lastmod>2026-10-25T09:00:00+11:00</lastmod>
+  </url>
+  <url>
+    <loc>https://jkdlegacy.com.au/affiliated-schools</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://jkdlegacy.com.au/affiliated-schools"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://jkdlegacy.com.au/affiliated-schools?lang=es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://jkdlegacy.com.au/affiliated-schools"/>
+    <lastmod>2026-10-25T09:00:00+11:00</lastmod>
+  </url>
+</urlset>
