@@ -44,4 +44,11 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://jkdlegacy.com.au/affiliated-schools"/>
     <lastmod>2026-10-25T09:00:00+11:00</lastmod>
   </url>
+  <url>
+    <loc>https://jkdlegacy.com.au/bruce-lee-birthday</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://jkdlegacy.com.au/bruce-lee-birthday"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://jkdlegacy.com.au/bruce-lee-birthday?lang=es"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://jkdlegacy.com.au/bruce-lee-birthday"/>
+    <lastmod>2026-10-25T09:00:00+11:00</lastmod>
+  </url>
 </urlset>

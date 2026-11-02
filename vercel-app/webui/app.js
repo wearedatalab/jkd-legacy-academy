@@ -1272,7 +1272,7 @@ async function viewStats(month) {
 const SITE_PAGES = [
   ['/', 'Home'], ['/self-defence-classes-melbourne', 'Self-defence classes Melbourne'], ['/jeet-kune-do-melbourne', 'Jeet Kune Do Melbourne'],
   ['/womens-self-defence-melbourne', "Women's self-defence"], ['/private-lessons-melbourne', 'Private lessons'], ['/jeet-kune-do-adelaide', 'Jeet Kune Do Adelaide'],
-  ['/affiliated-schools', 'JKD schools in Australia'], ['/legacy', 'Legacy (lineage)'], ['/the-way', 'The Way (timetable & prices)'], ['/free-trial', 'Free trial class'],
+  ['/affiliated-schools', 'JKD schools in Australia'], ['/legacy', 'Legacy (lineage)'], ['/the-way', 'The Way (timetable & prices)'], ['/free-trial', 'Free trial class'], ['/bruce-lee-birthday', 'Bruce Lee birthday event (28 Nov)'],
 ];
 const wordsOf = (html) => (String(html || '').replace(/<[^>]+>/g, ' ').match(/\S+/g) || []).length;
 const slugify = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80);

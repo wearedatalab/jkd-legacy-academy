@@ -638,3 +638,18 @@ if (/\/thanks(\.html)?$/.test(location.pathname)) {
     if (es) location.replace(es.href + location.hash);
   }
 })();
+
+// ===== /thanks: copy específico para el registro al evento del cumpleaños de Bruce Lee (/bruce-lee-birthday) =====
+if (/\/thanks(\.html)?$/.test(location.pathname)) {
+  let fromB = ''; try { fromB = sessionStorage.getItem('jkd_from') || ''; } catch (e) {}
+  if (fromB === 'bruce_lee_birthday') {
+    const es = document.documentElement.lang === 'es';
+    const set = (sel, html) => { const el = document.querySelector(sel); if (el) { el.removeAttribute('data-i18n'); el.removeAttribute('data-i18n-html'); el.innerHTML = html; } };
+    const tel = '<a href="tel:+61459785073" style="color:var(--text)">0459 785 073</a>';
+    set('.thanks .eyebrow', es ? 'Lugar reservado · sáb 28 nov' : 'Spot reserved · Sat 28 Nov');
+    set('.thanks h1', es ? '¡Nos vemos en el<br><span class="text-accent">cumpleaños de Bruce</span>!' : 'See you at<br><span class="text-accent">Bruce’s birthday</span>.');
+    set('.thanks p.lead', es ? 'Tu lugar para The Dragon’s Birthday Experience está reservado: sábado 28 de noviembre, de 9:30 a 11:30 a. m. (puertas desde las 9:00), en Unit 6 / 72-80 Hampstead Rd, Maidstone. Ven con ropa cómoda y una botella de agua.'
+                             : 'Your spot at The Dragon’s Birthday Experience is reserved: Saturday 28 November, 9:30 to 11:30 am (doors open 9:00), at Unit 6 / 72-80 Hampstead Rd, Maidstone. Wear comfortable clothes and bring a water bottle.');
+    set('.thanks .note', es ? 'Te enviaremos un recordatorio antes del día. ¿Preguntas? Llámanos al ' + tel + '.' : 'We’ll send you a reminder before the day. Questions? Call us on ' + tel + '.');
+  }
+}

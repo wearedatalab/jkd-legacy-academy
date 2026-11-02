@@ -4,15 +4,16 @@
 //   Desde el 28-oct-2026 la fuente de producción es jkd-legacy-seo (sitio SEO + landings + blog + CRM).
 //   jkd-legacy-redesign sigue siendo la base de las páginas originales que build.py copia y parchea.
 //   - Assets estáticos del sitio TAMBIÉN en la raíz -> los sirve el CDN de Vercel directo (rápido)
-// Uso:  node _build-vercel.mjs   (desde cualquier carpeta; usa rutas absolutas)
+// Uso:  node _build-vercel.mjs   (desde cualquier carpeta; escribe en vercel-app/ junto a este script)
 // Root Directory en Vercel = vercel-app  (por eso este script en la raíz del repo NO afecta el build de Vercel).
 import { rmSync, cpSync, mkdirSync, existsSync, writeFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const WEBS = 'C:\\Users\\donju\\Desktop\\Webs';
 const CRM = path.join(WEBS, 'jkd-legacy-seo');
 const SITE = path.join(CRM, 'site');
-const REPO = 'C:\\Users\\donju\\Desktop\\jkd-legacy-academy';
+const REPO = path.dirname(fileURLToPath(import.meta.url));   // la carpeta de este repo, donde esté clonado
 const OUT = path.join(REPO, 'vercel-app');
 
 const noHeavy = (src) => {

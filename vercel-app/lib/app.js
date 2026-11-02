@@ -360,7 +360,7 @@ const MIGRATION_REDIRECTS = {
   '/category/uncategorized': '/',
 };
 // Páginas reales del sitio nuevo (para no redirigirlas por error y para el fallback de "primer segmento").
-const SEO_LANDINGS = ['self-defence-classes-melbourne', 'jeet-kune-do-melbourne', 'womens-self-defence-melbourne', 'private-lessons-melbourne', 'jeet-kune-do-adelaide', 'affiliated-schools'];
+const SEO_LANDINGS = ['self-defence-classes-melbourne', 'jeet-kune-do-melbourne', 'womens-self-defence-melbourne', 'private-lessons-melbourne', 'jeet-kune-do-adelaide', 'affiliated-schools', 'bruce-lee-birthday'];
 const REAL_PAGES = ['legacy', 'the-way', 'join-the-family', 'thanks', 'free-trial', 'privacy', ...SEO_LANDINGS];
 // Páginas solo en inglés (landing de pauta y privacidad) → sin hreflang/og:locale alternativos.
 // Las landings SEO y el blog son bilingües: la versión ?lang=es es un HTML propio (<página>.es.html).
