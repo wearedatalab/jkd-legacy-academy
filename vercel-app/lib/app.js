@@ -243,8 +243,24 @@ async function ensureSettings() {
 // Ficha "Jeet Kune Do Legacy Academy" (Unit 6/72-80 Hampstead Rd, Maidstone). La API key va en la env
 // GOOGLE_PLACES_API_KEY (Places API "New" habilitada). Google entrega como máximo 5 reseñas por ficha.
 const GOOGLE_PLACE_ID = process.env.GOOGLE_PLACE_ID || 'ChIJ3cUhMY3FsGoRZUvifu6zReo';
+// Base cuando no hay API key (o falla): las 5 reseñas públicas de la ficha, copiadas tal cual de Google Maps el
+// 3-nov-2026 (son las mismas 5 que entrega la API). `date` es el mes aproximado de publicación: con él se calcula
+// «hace X» igual que Google («a year ago» cubre de 12 a 23 meses). Actualizar cuando lleguen reseñas nuevas.
+const AV = (id) => `https://lh3.googleusercontent.com/${id}=w88-h88-p-rp-mo-br100`;
+const REVIEWS_BASE = [
+  { author: 'Kim Linton', rating: 5, date: '2026-06', photo: AV('a-/ALV-UjV8vgJ1mQoD47LhACpCTNqI_8i9tgfaGCZ2FM7uh78ymcWOF9w'),
+    text: 'I had a number of sessions with Ricardo at Jeet Kune Do Legacy Academy and gained so much more than just self-defence skills. Ricardo taught me how to read a room, become more aware of my surroundings, remove myself from potentially dangerous situations, and how to respond calmly if trouble does find me.\n\nAs a woman, the training significantly increased my confidence and helped me reconnect my mind and body in a way I didn’t expect. Ricardo creates an environment that is supportive, practical, and empowering.\n\nThank you, Ricardo, for such an incredible gift and learning experience.' },
+  { author: 'Stephen Degenaro', rating: 5, date: '2025-09', photo: AV('a-/ALV-UjXzuROGTPU900CC4_jtAeBHH6ICkkGFTO8zTWKOdJvGa7TQtzBH'),
+    text: 'I’ve had the privilege of training under Sigung Ricardo Vargas for the past three years, both in private and group sessions—and I can honestly say, it’s been an incredible journey. I feel truly fortunate, as do many others, to experience his deep knowledge, genuine passion, and unique approach to teaching.\n\nFrom day one, Ricardo greets you with warmth, patience (seriously, the patience of a saint!), and an uncanny ability to teach students of *all* ages and experience levels. Whether you\'re a complete beginner or a seasoned martial artist, he breaks down the techniques, principles, and philosophy of Bruce Lee’s Jeet Kune Do in a way that’s clear, accessible, and inspiring.\n\nWith over 20 years of experience, Sigung Ricardo brings a rare combination of technical expertise, crystal-clear instruction, and a deep passion for the art. He adapts his teaching to match each student’s learning style and stays laser-focused on helping you grow—not just as a martial artist, but as a person.\n\nWhether you\'re stepping onto the mat for the first time, returning after a break, or coming from another discipline looking for a holistic, practical, and philosophical martial arts approach—Jeet Kune Do Legacy Academy is the place to be. I highly recommend connecting with Sigung Ricardo Vargas and joining this amazing, welcoming community of practitioners.' },
+  { author: 'Paul Chiaravalle', rating: 5, date: '2025-09', photo: AV('a/ACg8ocK_pUdhMZTjVkJmSj3z6ZoZpG3UFSEtIQr_aAxB8ltIvEVw_g'),
+    text: 'I have been involved in martial all my life, and for the last coming up to 6 years I have had the privilege of training under Sifu Ricardo Vargas getting to understand and apply Bruce Lee\'s Jeet Kune Do. As a teacher he is the most genuine instructor I have come across, not only in teaching the art but also in life\'s journey, getting a real perspective on where you are and what one can achieve through hard work and determination. I am honoured to have Sifu as an instructor and mentor.\n\nIf your a martial artist or someone looking to start learning the art this a great opportunity to learn from a 2nd generation student of Bruce Lee. It will be a journey not only physical but mentally and spiritual.\n\nThank you Sifu for a great ongoing journey.' },
+  { author: 'Chris Papadopoulos', rating: 5, date: '2025-09', photo: AV('a-/ALV-UjVqOjSVA5JZ4XbYEXKuUXkdnqG8rKOvMlAHxBLntI8PjhJm6Ajb'),
+    text: 'I discovered JKD academy in May and all i can say what an amazing experience. The group classes are great, everyone is there to learn and every single student is so supportive. A welcome handshake at the begining of the night and “good job” handshake at the end. You’re not only learning a new skill, you’re training the body and most importantly the mind. I highly recommend joining and surrounding yourself with great people.' },
+  { author: 'Carl', rating: 5, date: '2025-09', photo: AV('a/ACg8ocLaRfsrnmE4OyvZPZysh-7B5qQuzIHG_bJ4CCVflxtpefFYlOk'),
+    text: 'I have been training at the academy for a while now. Sigung Vargas is the best teacher that I have come across. From the very beginning he shows care and understanding and helps you grow as an individual. At the beginning I had zero confidence in myself and now I probably have too much. If you are looking to discover yourself or join a family of like minded individuals, this is the place.' },
+];
 const REVIEWS_FALLBACK = {
-  source: 'summary', rating: 5, count: 24, reviews: [],
+  source: 'base', rating: 5, count: 24, reviews: REVIEWS_BASE,
   url: 'https://www.google.com/maps/search/?api=1&query=Jeet+Kune+Do+Legacy+Academy&query_place_id=' + GOOGLE_PLACE_ID,
   writeUrl: 'https://search.google.com/local/writereview?placeid=' + GOOGLE_PLACE_ID,
 };
@@ -288,24 +304,45 @@ async function googleReviews() {
   }
 }
 
-// Reseñas escritas en el HTML del servidor (Google y los rastreadores de IA no ejecutan el fetch del navegador)
+// «hace X» al estilo de Google a partir del mes aproximado (las reseñas de la API ya traen su texto relativo)
+function reviewWhen(v, es) {
+  if (!v.date) return v.when || '';
+  const [y, m] = v.date.split('-').map(Number);
+  const now = new Date();
+  const months = (now.getUTCFullYear() - y) * 12 + (now.getUTCMonth() + 1 - m);
+  if (months < 1) return es ? 'este mes' : 'this month';
+  if (months < 12) return months === 1 ? (es ? 'hace un mes' : 'a month ago') : (es ? `hace ${months} meses` : `${months} months ago`);
+  const yrs = Math.floor(months / 12);
+  return yrs === 1 ? (es ? 'hace un año' : 'a year ago') : (es ? `hace ${yrs} años` : `${yrs} years ago`);
+}
+const G_MARK = '<svg class="g-logo" viewBox="0 0 48 48" width="20" height="20" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
+const VERIFIED = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#1a73e8" d="M12 1.5l2.4 1.8 3-.2.9 2.8 2.5 1.7-.9 2.9.9 2.9-2.5 1.7-.9 2.8-3-.2L12 19.5l-2.4-1.8-3 .2-.9-2.8-2.5-1.7.9-2.9-.9-2.9 2.5-1.7.9-2.8 3 .2z"/><path fill="none" stroke="#fff" stroke-width="2" d="M8 10.5l2.6 2.6L16 7.8"/></svg>';
+
+// Reseñas escritas en el HTML del servidor (Google y los rastreadores de IA no ejecutan el JS del navegador)
 async function withReviews(html, lang) {
-  const GRID = /(<div class="reviews-grid" data-reviews-grid(?:="")?>)<\/div>/;   // en las páginas ES (BeautifulSoup) el atributo sale como =""
+  const GRID = /(<div(?=[^>]*\bdata-reviews-grid)[^>]*>)<\/div>/;   // sin depender del orden de atributos (las páginas ES salen de BeautifulSoup)
   if (!GRID.test(html)) return html;
   let d; try { d = await googleReviews(); } catch (e) { return html; }
   const es = lang === 'es';
   const e = (s) => String(s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const https = (u) => (/^https:\/\//.test(u || '') ? u : '');
-  let out = html.replace(/<strong class="rv-rating">[^<]*<\/strong>/g, `<strong class="rv-rating">${Number(d.rating || 5).toFixed(1)}</strong>`)
-    .replace(/<span class="rv-count">[^<]*<\/span>/g, `<span class="rv-count">${d.count} ${es ? 'reseñas en Google' : 'reviews on Google'}</span>`);
+  const rating = Number(d.rating || 5);
+  let out = html.replace(/<strong class="rv-rating">[^<]*<\/strong>/g, `<strong class="rv-rating">${rating.toFixed(1)}</strong>`)
+    .replace(/<span class="rv-count">[^<]*<\/span>/g, `<span class="rv-count">${es ? `Basado en <b>${d.count}</b> reseñas de Google` : `Based on <b>${d.count}</b> Google reviews`}</span>`)
+    .replace(/<span class="rv-word">[^<]*<\/span>/g, `<span class="rv-word">${rating >= 4.5 ? (es ? 'Excelente' : 'Excellent') : (es ? 'Muy bueno' : 'Very good')}</span>`);
   if (!d.reviews || !d.reviews.length) return out;
   const cards = d.reviews.slice(0, 5).map((v) => {
-    const photo = https(v.photo) ? `<img src="${e(v.photo)}" alt="" width="40" height="40" loading="lazy" referrerpolicy="no-referrer">` : `<span class="rv-initial" aria-hidden="true">${e((v.author || '?').trim().charAt(0).toUpperCase())}</span>`;
-    const name = https(v.authorUrl) ? `<a href="${e(v.authorUrl)}" target="_blank" rel="noopener noreferrer">${e(v.author)}</a>` : e(v.author);
-    const more = https(v.url) ? `<a class="rv-more" href="${e(v.url)}" target="_blank" rel="noopener noreferrer">${es ? 'Leer en Google' : 'Read on Google'}</a>` : '';
-    return `<figure class="review-card"><div class="rv-stars" aria-label="${v.rating} / 5">${'★'.repeat(v.rating)}${'☆'.repeat(5 - v.rating)}</div><blockquote>${e(v.text)}</blockquote>${more}<figcaption>${photo}<span><strong>${name}</strong><small>${e(v.when)} · Google</small></span></figcaption></figure>`;
+    const photo = https(v.photo) ? `<img class="rv-av" src="${e(v.photo)}" alt="" width="44" height="44" loading="lazy" decoding="async" referrerpolicy="no-referrer">`
+      : `<span class="rv-initial" aria-hidden="true">${e((v.author || '?').trim().charAt(0).toUpperCase())}</span>`;
+    const name = https(v.authorUrl) ? `<a href="${e(v.authorUrl)}" target="_blank" rel="noopener noreferrer" style="color:inherit">${e(v.author)}</a>` : e(v.author);
+    const stars = Math.max(1, Math.min(5, Math.round(v.rating || 5)));
+    const text = e(v.text).replace(/\n{2,}/g, '<br><br>').replace(/\n/g, '<br>');
+    return `<figure class="rv-card"><header>${photo}<div><strong>${name}</strong><small>${e(reviewWhen(v, es))}</small></div>${G_MARK}</header>`
+      + `<div class="rv-stars" role="img" aria-label="${es ? `${stars} de 5 estrellas` : `${stars} out of 5 stars`}"><span aria-hidden="true">${'★'.repeat(stars)}${'☆'.repeat(5 - stars)}</span>${VERIFIED}</div>`
+      + `<blockquote class="rv-text">${text}</blockquote>`
+      + `<button type="button" class="rv-more" aria-expanded="false" hidden>${es ? 'Leer más' : 'Read more'}</button></figure>`;
   }).join('');
-  return out.replace(GRID, (m, open) => `${open}${cards}</div>`).replace('class="section reviews"', 'class="section reviews has-reviews"');
+  return out.replace(GRID, (m, open) => `${open}${cards}</div>`).replace(/class="section reviews/, 'class="section reviews has-reviews');
 }
 
 // Ficha de membresía guardada → objeto con data parseada; PDF como descarga

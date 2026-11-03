@@ -592,35 +592,40 @@ if (/\/thanks(\.html)?$/.test(location.pathname)) {
 }
 
 
-// ===== Reseñas de Google (/api/public/reviews): se piden cuando la sección se acerca al viewport =====
+// ===== Reseñas de Google: carril con flechas + «Leer más». Las tarjetas las escribe el servidor en el HTML
+// (withReviews en lib/app.js), así Google y los buscadores de IA las leen sin ejecutar JS. Sin autoplay.
 (() => {
-  const sec = document.querySelector('[data-reviews]');
-  if (!sec || window.JKD_NO_BACKEND) return;
-  const esc = (s) => String(s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const safeUrl = (u) => (/^https:\/\//.test(u || '') ? u : '');
-  const load = () => fetch('/api/public/reviews').then((r) => (r.ok ? r.json() : null)).then((d) => {
-    if (!d) return;
-    const es = document.documentElement.lang === 'es';
-    sec.querySelector('.rv-rating').textContent = Number(d.rating || 5).toFixed(1);
-    sec.querySelector('.rv-count').textContent = es ? `${d.count} reseñas en Google` : `${d.count} reviews on Google`;
-    if (safeUrl(d.url)) sec.querySelectorAll('.rv-all').forEach((a) => { a.href = d.url; });
-    if (safeUrl(d.writeUrl)) sec.querySelectorAll('.rv-write').forEach((a) => { a.href = d.writeUrl; });
-    if (!Array.isArray(d.reviews) || !d.reviews.length) return;
-    sec.querySelector('[data-reviews-grid]').innerHTML = d.reviews.slice(0, 5).map((v) => {
-      const initial = esc((v.author || '?').trim().charAt(0).toUpperCase());
-      const photo = safeUrl(v.photo) ? `<img src="${esc(v.photo)}" alt="" width="40" height="40" loading="lazy" referrerpolicy="no-referrer">` : `<span class="rv-initial" aria-hidden="true">${initial}</span>`;
-      const name = safeUrl(v.authorUrl) ? `<a href="${esc(v.authorUrl)}" target="_blank" rel="noopener noreferrer">${esc(v.author)}</a>` : esc(v.author);
-      const more = safeUrl(v.url) ? `<a class="rv-more" href="${esc(v.url)}" target="_blank" rel="noopener noreferrer">${es ? 'Leer en Google' : 'Read on Google'}</a>` : '';
-      return `<figure class="review-card"><div class="rv-stars" aria-label="${v.rating} / 5">${'★'.repeat(v.rating)}${'☆'.repeat(5 - v.rating)}</div>`
-        + `<blockquote>${esc(v.text)}</blockquote>${more}`
-        + `<figcaption>${photo}<span><strong>${name}</strong><small>${esc(v.when)} · Google</small></span></figcaption></figure>`;
-    }).join('');
-    sec.classList.add('has-reviews');
-  }).catch(() => {});
-  if ('IntersectionObserver' in window) {
-    const io = new IntersectionObserver((ents) => { if (ents.some((e) => e.isIntersecting)) { io.disconnect(); load(); } }, { rootMargin: '600px' });
-    io.observe(sec);
-  } else load();
+  const es = document.documentElement.lang === 'es';
+  document.querySelectorAll('[data-reviews]').forEach((sec) => {
+    const track = sec.querySelector('[data-reviews-grid]');
+    if (!track) return;
+    const prev = sec.querySelector('.rv-nav.prev');
+    const next = sec.querySelector('.rv-nav.next');
+    const step = () => { const c = track.querySelector('.rv-card'); return c ? c.getBoundingClientRect().width + 16 : track.clientWidth * 0.8; };
+    const sync = () => {
+      const max = track.scrollWidth - track.clientWidth - 2;
+      if (prev) prev.disabled = track.scrollLeft <= 2;
+      if (next) next.disabled = track.scrollLeft >= max;
+      sec.classList.toggle('rv-fits', max <= 0);           // todas caben: sin flechas
+    };
+    const go = (dir) => track.scrollBy({ left: dir * step(), behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    if (prev) prev.addEventListener('click', () => go(-1));
+    if (next) next.addEventListener('click', () => go(1));
+    track.addEventListener('scroll', sync, { passive: true });
+    window.addEventListener('resize', sync);
+    // «Leer más» solo en las reseñas recortadas
+    const clamp = () => track.querySelectorAll('.rv-card').forEach((card) => {
+      const p = card.querySelector('.rv-text'); const b = card.querySelector('.rv-more');
+      if (p && b && !card.classList.contains('open')) b.hidden = p.scrollHeight <= p.clientHeight + 4;
+    });
+    track.querySelectorAll('.rv-more').forEach((b) => b.addEventListener('click', () => {
+      const card = b.closest('.rv-card'); const open = card.classList.toggle('open');
+      b.textContent = open ? (es ? 'Leer menos' : 'Show less') : (es ? 'Leer más' : 'Read more');
+      b.setAttribute('aria-expanded', open);
+    }));
+    sync(); clamp();
+    window.addEventListener('load', () => { sync(); clamp(); });
+  });
 })();
 
 // ===== Selector de idioma de las páginas generadas (landings y blog: cada idioma es un HTML propio) =====
