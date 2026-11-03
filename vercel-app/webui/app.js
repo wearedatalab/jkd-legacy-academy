@@ -19,6 +19,7 @@ const roleLabel = (r) => ROLE_LABELS[r] || r;
 const isAdmin = () => !!(state.me && state.me.role === 'admin');
 
 const ICON = {
+  projects: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l15-6v14L3 13z"/><path d="M7 12.5V18a2 2 0 0 0 2 2h1"/><path d="M18 9a3 3 0 0 1 0 6"/></svg>',
   kanban: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="6" height="14" rx="1"/><rect x="9.5" y="3" width="6" height="9" rx="1" transform="translate(5.5 0)"/><rect x="15" y="3" width="6" height="18" rx="1"/></svg>',
   leads: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>',
   stats: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6"/><rect x="12" y="7" width="3" height="10"/><rect x="17" y="13" width="3" height="4"/></svg>',
@@ -115,6 +116,7 @@ function renderApp() {
   const navItems = [
     ['kanban', 'Pipeline', ICON.kanban],
     ['leads', 'Leads', ICON.leads],
+    ['projects', 'Projects', ICON.projects],
     ['tasks', 'Tasks', ICON.tasks],
     ['students', 'Students', ICON.students],
     ['stats', 'Statistics', ICON.stats],
@@ -134,8 +136,8 @@ function renderApp() {
       </div>
       <nav id="nav">
         ${navItems.map(([k, label, icon]) => `
-          <button class="nav-item ${state.view === k || (state.view === 'leadDetail' && k === 'leads') || (state.view === 'postEdit' && k === 'blog') ? 'active' : ''}" data-view="${k}">
-            ${icon}<span>${label}</span>${k === 'leads' ? `<span class="badge" id="badge-leads"></span>` : k === 'tasks' ? `<span class="badge" id="badge-tasks"></span>` : ''}
+          <button class="nav-item ${state.view === k || (state.view === 'leadDetail' && k === 'leads') || (state.view === 'postEdit' && k === 'blog') || (state.view === 'projectDetail' && k === 'projects') ? 'active' : ''}" data-view="${k}">
+            ${icon}<span>${label}</span>${k === 'leads' ? `<span class="badge" id="badge-leads"></span>` : k === 'projects' ? `<span class="badge badge-camp" id="badge-projects"></span>` : k === 'tasks' ? `<span class="badge" id="badge-tasks"></span>` : ''}
           </button>`).join('')}
       </nav>
       <div class="side-foot">
@@ -170,7 +172,8 @@ function renderApp() {
 
   $('#badge-leads').textContent = state.leads.length || '';
   paintTaskBadge();
-  const views = { kanban: viewKanban, leads: viewLeads, tasks: viewTasks, students: viewStudents, stats: viewStats, users: viewUsers, redirects: viewRedirects, config: viewSettings, blog: viewBlog, postEdit: () => viewPostEdit(state.postId), leadDetail: () => viewLeadDetail(state.detailId) };
+  paintProjectsBadge();
+  const views = { kanban: viewKanban, leads: viewLeads, tasks: viewTasks, students: viewStudents, stats: viewStats, users: viewUsers, redirects: viewRedirects, config: viewSettings, blog: viewBlog, postEdit: () => viewPostEdit(state.postId), leadDetail: () => viewLeadDetail(state.detailId), projects: viewProjects, projectDetail: () => viewProjectDetail(state.projectId) };
   (views[state.view] || viewKanban)();
 }
 
@@ -322,7 +325,7 @@ async function setUnsubscribed(id, on) {
 async function changeStatus(id, status, loss_reason) {
   try {
     await api('PATCH', `/api/leads/${id}/status`, { status, loss_reason });
-    await loadLeads();
+    await Promise.all([loadLeads(), loadCampaigns()]);   // un lead de la bandeja de un proyecto pasa al pipeline al trabajarlo
     if (state.view === 'kanban') paintKanban();
     else if (state.view === 'leads') paintLeads();
     else if (state.view === 'leadDetail') viewLeadDetail(id);
@@ -462,11 +465,13 @@ async function viewLeadDetail(id) {
           <span>·</span><span>${esc((lead.source || '').toUpperCase())}</span>
           <span>·</span><span>Registered ${fmtDate(lead.created_at)}</span>
           ${lead.unsubscribed ? '<span>·</span><span class="unsub-tag">Unsubscribed</span>' : ''}
+          ${lead.campaign_id ? `<span>·</span><span class="camp-tag">📣 ${esc(lead.campaign_name || 'Campaign')}</span>` : ''}
         </div>
       </div>
       <div class="tools">${isAdmin() ? '<button class="btn btn-ghost btn-sm" id="del">Delete</button>' : ''}</div>
     </div>
 
+    ${lead.campaign_state === 'inbox' ? `<div class="camp-banner"><span>📣 <b>Campaign registration · ${esc(lead.campaign_name || '')}.</b> This lead is waiting in Projects and is not in the pipeline yet.</span><button class="btn btn-primary btn-sm" id="to-pipe">Move to pipeline →</button></div>` : ''}
     ${lead.unsubscribed ? `<div class="unsub-banner">⛔ <b>Unsubscribed — do not contact.</b> This person asked never to be written to or called${lead.unsubscribed_at ? ` (since ${fmtDate(lead.unsubscribed_at)})` : ''}. Calls, emails and WhatsApp are disabled here.</div>` : ''}
     <div class="ld-tabs" id="ld-tabs">
       <button data-t="perfil" class="active">Profile</button>
@@ -557,7 +562,14 @@ async function viewLeadDetail(id) {
       </aside>
     </div>`;
 
-  $('#back').addEventListener('click', backToLeads);
+  if (lead.campaign_state === 'inbox') {
+    $('#back').textContent = '← Back to the project';
+    $('#back').addEventListener('click', () => { location.hash = 'project-' + lead.campaign_id; });
+  } else $('#back').addEventListener('click', backToLeads);
+  $('#to-pipe')?.addEventListener('click', async () => {
+    if (!(await moveToPipeline([lead.id]))) return;
+    viewLeadDetail(lead.id);
+  });
   $('#unsub-btn').addEventListener('click', async () => {
     const on = !lead.unsubscribed;
     if (!confirm(on ? 'Mark this person as unsubscribed? Nobody should contact them again (calls, email, WhatsApp).' : 'Remove the unsubscribe flag? Only do this if the person asked to be contacted again.')) return;
@@ -644,6 +656,8 @@ function eventHTML(ev) {
   else if (ev.type === 'note') txt = `📝 ${esc(ev.note)}`;
   else if (ev.type === 'unsubscribe') { cls = 'perdido'; txt = `⛔ ${esc(ev.note || 'Unsubscribed')}`; }
   else if (ev.type === 'resubscribe') txt = `✓ ${esc(ev.note || 'Unsubscribe removed')}`;
+  else if (ev.type === 'campaign') { cls = 'campaign'; txt = `📣 ${esc(ev.note || 'Campaign registration')}`; }
+  else if (ev.type === 'to_pipeline') { cls = 'campaign'; txt = `→ ${esc(ev.note || 'Moved to the pipeline')}`; }
   return `<div class="tl ${cls}"><span class="dot"></span><div class="body"><div class="t">${txt}</div><div class="d">${fmtDateTime(ev.created_at)}${ev.user_name ? ' · ' + esc(ev.user_name) : ''}</div></div></div>`;
 }
 
@@ -1644,7 +1658,195 @@ async function openStudent(id, onDeleted) {
   });
 }
 
+// ============================================================
+//  PROJECTS — campañas (landings de eventos, promociones…). Sus registros llegan a una bandeja propia
+//  y no entran al pipeline hasta que alguien los mueve. Cada campaña se enruta por su «source key».
+// ============================================================
+async function moveToPipeline(ids) {
+  try {
+    const r = await api('POST', '/api/campaigns/move-to-pipeline', { ids });
+    await Promise.all([loadLeads(), loadCampaigns()]);
+    toast(r.moved === 1 ? 'Moved to the pipeline (Registered)' : `${r.moved} leads moved to the pipeline`);
+    return true;
+  } catch (e) { toast('Could not move to the pipeline', 'err'); return false; }
+}
+
+async function viewProjects() {
+  const v = $('#view');
+  v.innerHTML = '<div class="empty">Loading…</div>';
+  await loadCampaigns();
+  const list = state.campaigns || [];
+  v.innerHTML = `
+    <div class="topbar">
+      <div><span class="ey">Projects</span><h1>Campaigns</h1></div>
+      <div class="tools">
+        ${list.length > 6 ? `<div class="search">${ICON.search}<input id="pj-search" placeholder="Search campaign…"></div>` : ''}
+        ${isAdmin() ? '<button class="btn btn-primary btn-sm" id="pj-new">+ New campaign</button>' : ''}
+      </div>
+    </div>
+    <p class="blog-intro">Registrations from campaign landing pages (events, promotions…) land here, not in the pipeline. Review them and move the real new leads to the pipeline with <b>Move to pipeline</b>. Each campaign has a <b>source key</b>: its landing form sends it, and that is how a registration reaches the right project.</p>
+    <div id="pj-grid" class="pj-grid"></div>`;
+  const paint = () => {
+    const q = ($('#pj-search')?.value || '').toLowerCase();
+    const rows = list.filter((c) => !q || `${c.name} ${c.source} ${c.description || ''}`.toLowerCase().includes(q));
+    const grid = $('#pj-grid');
+    if (!rows.length) { grid.innerHTML = `<div class="empty"><div class="big">${list.length ? 'No matches' : 'No campaigns yet'}</div>${list.length ? '' : 'Create one for your next landing page.'}</div>`; return; }
+    grid.innerHTML = rows.map((c) => `
+      <button class="pj-card${c.status === 'archived' ? ' archived' : ''}" data-id="${c.id}">
+        <div class="pj-top"><span class="chip">${c.status === 'archived' ? 'Archived' : 'Active'}</span>${c.inbox ? `<span class="pj-new">${c.inbox} new</span>` : ''}</div>
+        <h3>${esc(c.name)}</h3>
+        ${c.description ? `<p>${esc(c.description)}</p>` : ''}
+        <div class="pj-nums">
+          <div><b>${c.inbox}</b><span>Pending</span></div>
+          <div><b>${c.total - c.inbox}</b><span>In pipeline</span></div>
+          <div><b>${c.total}</b><span>Total</span></div>
+        </div>
+        <div class="pj-foot"><code>${esc(c.source)}</code><span>${c.last_at ? 'Last ' + fmtDate(c.last_at) : 'No registrations yet'}</span></div>
+      </button>`).join('');
+    grid.querySelectorAll('.pj-card').forEach((b) => b.addEventListener('click', () => { location.hash = 'project-' + b.dataset.id; }));
+  };
+  $('#pj-search')?.addEventListener('input', paint);
+  $('#pj-new')?.addEventListener('click', () => openCampaignModal(null, (c) => { location.hash = 'project-' + c.id; }));
+  paint();
+}
+
+async function viewProjectDetail(id) {
+  const v = $('#view');
+  v.innerHTML = '<div class="empty">Loading…</div>';
+  let data;
+  try { data = await api('GET', `/api/campaigns/${id}/leads`); }
+  catch (e) { v.innerHTML = `<div class="empty"><div class="big">Campaign not found</div><button class="btn btn-ghost btn-sm" id="back" style="margin-top:14px">← Projects</button></div>`; $('#back')?.addEventListener('click', () => { location.hash = 'projects'; }); return; }
+  const c = data.campaign; const leads = data.leads;
+  if (!state.pjTab || state.pjFor !== id) { state.pjTab = leads.some((l) => l.campaign_state === 'inbox') ? 'inbox' : 'all'; state.pjFor = id; }
+  const sel = new Set();
+  const landingUrl = c.landing ? (/^https?:/.test(c.landing) ? c.landing : location.origin + c.landing) : '';
+  v.innerHTML = `
+    <div class="topbar">
+      <div>
+        <button class="backlink" id="back">← Projects</button>
+        <h1 style="margin-top:6px">${esc(c.name)}</h1>
+        <div class="detail-sub">
+          <span class="chip">${c.status === 'archived' ? 'Archived' : 'Active'}</span>
+          <span>·</span><span>Source key <code>${esc(c.source)}</code></span>
+          ${landingUrl ? `<span>·</span><a href="${esc(landingUrl)}" target="_blank" rel="noopener">Landing ↗</a>` : ''}
+        </div>
+      </div>
+      <div class="tools">
+        <div class="search">${ICON.search}<input id="pj-q" placeholder="Search name, email, phone…"></div>
+        <button class="btn btn-ghost btn-sm" id="pj-csv">Export CSV</button>
+        ${isAdmin() ? '<button class="btn btn-ghost btn-sm" id="pj-edit">Edit</button>' : ''}
+      </div>
+    </div>
+    ${c.description ? `<p class="blog-intro">${esc(c.description)}</p>` : ''}
+    <div class="ld-tabs" id="pj-tabs">
+      <button data-t="inbox">Pending <span class="cnt">${c.inbox}</span></button>
+      <button data-t="pipeline">In pipeline <span class="cnt">${c.total - c.inbox}</span></button>
+      <button data-t="all">All <span class="cnt">${c.total}</span></button>
+    </div>
+    <div class="pj-bulk" id="pj-bulk" hidden><span id="pj-sel-n"></span><button class="btn btn-primary btn-sm" id="pj-move">Move selected to pipeline →</button><button class="btn btn-ghost btn-sm" id="pj-clear">Clear</button></div>
+    <div class="panel"><div id="pj-table"></div></div>`;
+  const chan = (l) => { try { const a = typeof l.attribution === 'string' ? JSON.parse(l.attribution) : l.attribution; return a ? [a.channel, a.utm_source || a.source, a.utm_campaign || a.campaign].filter(Boolean).join(' · ') : ''; } catch (e) { return ''; } };
+  // Detalle corto: experiencia + acompañantes (las landings de evento los mandan en el mensaje como «guests: N»)
+  const details = (l) => {
+    const g = (l.message || '').match(/(?:guests|acompañantes):\s*([\w+]+)/i);
+    return [l.experience, g ? `+${g[1].replace(/^\+/, '')} friend(s)` : (l.message || '')].filter(Boolean).join(' · ') || '—';
+  };
+  const filtered = () => {
+    const q = ($('#pj-q').value || '').toLowerCase();
+    return leads.filter((l) => (state.pjTab === 'all' || l.campaign_state === state.pjTab)
+      && (!q || `${l.first_name} ${l.last_name} ${l.email} ${l.phone}`.toLowerCase().includes(q)));
+  };
+  const syncBulk = () => { $('#pj-bulk').hidden = !sel.size; $('#pj-sel-n').textContent = `${sel.size} selected`; };
+  const paint = () => {
+    v.querySelectorAll('#pj-tabs button').forEach((b) => b.classList.toggle('active', b.dataset.t === state.pjTab));
+    const rows = filtered();
+    const wrap = $('#pj-table');
+    if (!rows.length) { wrap.innerHTML = `<div class="empty"><div class="big">${leads.length ? 'Nothing here' : 'No registrations yet'}</div>${leads.length ? '' : 'Share the landing page to start receiving registrations.'}</div>`; syncBulk(); return; }
+    const pend = rows.filter((l) => l.campaign_state === 'inbox');
+    wrap.innerHTML = `<table><thead><tr>
+        <th style="width:34px">${pend.length ? `<input type="checkbox" id="pj-all" aria-label="Select all pending" ${pend.every((l) => sel.has(l.id)) ? 'checked' : ''}>` : ''}</th>
+        <th>Person</th><th>Contact</th><th>Details</th><th>Channel</th><th>Registered</th><th></th></tr></thead><tbody>
+      ${rows.map((l) => `<tr class="pj-row" data-id="${l.id}">
+        <td data-stop>${l.campaign_state === 'inbox' ? `<input type="checkbox" class="pj-ck" data-id="${l.id}" ${sel.has(l.id) ? 'checked' : ''} aria-label="Select">` : ''}</td>
+        <td><span class="lead-nm">${esc(fullName(l))}</span>${l.unsubscribed ? ' <span class="unsub-tag">Unsubscribed</span>' : ''}</td>
+        <td>${esc(l.email || '')}<br><span style="color:var(--mute)">${esc(l.phone || '')}</span></td>
+        <td style="max-width:280px;color:var(--dim);font-size:.84rem">${esc(details(l))}</td>
+        <td style="color:var(--mute);font-size:.8rem">${esc(chan(l) || '—')}</td>
+        <td>${fmtDateTime(l.created_at)}</td>
+        <td data-stop style="text-align:right;white-space:nowrap">${l.campaign_state === 'inbox'
+          ? `<button class="btn btn-primary btn-sm pj-one" data-id="${l.id}">To pipeline →</button>`
+          : `<span class="status-pill st-${l.status}">${STATUS_META[l.status]?.label || l.status}</span>`}</td>
+      </tr>`).join('')}
+    </tbody></table>`;
+    wrap.querySelectorAll('.pj-row').forEach((tr) => tr.addEventListener('click', (e) => { if (!e.target.closest('[data-stop]')) location.hash = 'lead-' + tr.dataset.id; }));
+    wrap.querySelectorAll('.pj-ck').forEach((ck) => ck.addEventListener('change', () => { const n = Number(ck.dataset.id); ck.checked ? sel.add(n) : sel.delete(n); syncBulk(); const all = $('#pj-all'); if (all) all.checked = pend.every((l) => sel.has(l.id)); }));
+    $('#pj-all')?.addEventListener('change', (e) => { pend.forEach((l) => (e.target.checked ? sel.add(l.id) : sel.delete(l.id))); paint(); });
+    wrap.querySelectorAll('.pj-one').forEach((b) => b.addEventListener('click', async () => { b.disabled = true; if (await moveToPipeline([Number(b.dataset.id)])) viewProjectDetail(id); else b.disabled = false; }));
+    syncBulk();
+  };
+  v.querySelectorAll('#pj-tabs button').forEach((b) => b.addEventListener('click', () => { state.pjTab = b.dataset.t; sel.clear(); paint(); }));
+  $('#pj-q').addEventListener('input', paint);
+  $('#back').addEventListener('click', () => { location.hash = 'projects'; });
+  $('#pj-clear').addEventListener('click', () => { sel.clear(); paint(); });
+  $('#pj-move').addEventListener('click', async () => {
+    if (!sel.size || !confirm(`Move ${sel.size} lead(s) to the pipeline? They will appear in “Registered”.`)) return;
+    if (await moveToPipeline([...sel])) viewProjectDetail(id);
+  });
+  $('#pj-csv').addEventListener('click', () => {
+    const cols = [['First name', 'first_name'], ['Last name', 'last_name'], ['Email', 'email'], ['Phone', 'phone'], ['Experience', 'experience'], ['Message', 'message'], ['Registered', 'created_at'], ['State', 'campaign_state'], ['Pipeline status', 'status'], ['Unsubscribed', 'unsubscribed']];
+    const q = (x) => '"' + String(x == null ? '' : x).replace(/"/g, '""') + '"';
+    const csv = '\ufeff' + [cols.map((c) => q(c[0])).join(','), ...filtered().map((l) => cols.map(([, k]) => q(k === 'campaign_state' ? (l[k] === 'inbox' ? 'Pending' : 'In pipeline') : k === 'status' ? (l.campaign_state === 'inbox' ? '' : STATUS_META[l.status]?.label) : k === 'unsubscribed' ? (l[k] ? 'Yes' : '') : l[k])).join(','))].join('\r\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    a.download = `${c.source}-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+  $('#pj-edit')?.addEventListener('click', () => openCampaignModal(c, () => viewProjectDetail(id), () => { location.hash = 'projects'; }));
+  paint();
+}
+
+function openCampaignModal(c, onSaved, onDeleted) {
+  const isNew = !c;
+  modal(`
+    <h2>${isNew ? 'New campaign' : 'Edit campaign'}</h2>
+    <p class="desc">Registrations whose form sends this <b>source key</b> land in this project instead of the pipeline.</p>
+    <div class="field"><label>Name</label><input id="cp-name" value="${esc(c?.name || '')}" placeholder="e.g. Bruce Lee Birthday 2026"></div>
+    <div class="form-row">
+      <div class="field"><label>Source key</label><input id="cp-source" value="${esc(c?.source || '')}" placeholder="e.g. bruce-lee-birthday" spellcheck="false"></div>
+      <div class="field"><label>Landing page</label><input id="cp-landing" value="${esc(c?.landing || '')}" placeholder="/bruce-lee-birthday"></div>
+    </div>
+    <div class="field"><label>Description (optional)</label><input id="cp-desc" value="${esc(c?.description || '')}" placeholder="Date, offer, channel…"></div>
+    ${isNew ? `<label class="cp-check"><input type="checkbox" id="cp-claim" checked> Also move existing leads with this source key into the project</label>`
+      : `<div class="field"><label>Status</label><select id="cp-status"><option value="active" ${c.status !== 'archived' ? 'selected' : ''}>Active</option><option value="archived" ${c.status === 'archived' ? 'selected' : ''}>Archived (keeps its registrations)</option></select></div>`}
+    <div class="modal-foot">
+      ${!isNew && !c.total ? '<button class="btn btn-ghost btn-sm danger-text" id="cp-del">Delete</button>' : ''}
+      <button class="btn btn-ghost btn-sm" id="cp-cancel">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="cp-save">${isNew ? 'Create campaign' : 'Save'}</button>
+    </div>`);
+  const slug = (x) => x.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+  if (isNew) $('#cp-name').addEventListener('input', () => { if (!$('#cp-source').dataset.touched) $('#cp-source').value = slug($('#cp-name').value); });
+  $('#cp-source').addEventListener('input', () => { $('#cp-source').dataset.touched = '1'; });
+  $('#cp-cancel').addEventListener('click', closeModal);
+  $('#cp-del')?.addEventListener('click', async () => {
+    if (!confirm('Delete this campaign? It has no registrations.')) return;
+    try { await api('DELETE', `/api/campaigns/${c.id}`); closeModal(); await loadCampaigns(); toast('Campaign deleted'); onDeleted && onDeleted(); }
+    catch (e) { toast(e.message || 'Could not delete', 'err'); }
+  });
+  $('#cp-save').addEventListener('click', async () => {
+    const body = { name: $('#cp-name').value.trim(), source: slug($('#cp-source').value), landing: $('#cp-landing').value.trim(), description: $('#cp-desc').value.trim() };
+    if (isNew) body.claim_existing = $('#cp-claim').checked; else body.status = $('#cp-status').value;
+    try {
+      const r = await api(isNew ? 'POST' : 'PATCH', isNew ? '/api/campaigns' : `/api/campaigns/${c.id}`, body);
+      closeModal(); await Promise.all([loadCampaigns(), loadLeads()]);
+      toast(isNew ? (r.claimed ? `Campaign created · ${r.claimed} existing lead(s) moved in` : 'Campaign created') : 'Campaign saved');
+      onSaved && onSaved(r);
+    } catch (e) { toast(e.message || 'Could not save', 'err'); }
+  });
+}
+
 // ---------- data loaders ----------
+async function loadCampaigns() { try { state.campaigns = await api('GET', '/api/campaigns'); } catch (e) { state.campaigns = []; } paintProjectsBadge(); }
+function paintProjectsBadge() { const b = $('#badge-projects'); if (b) { const n = (state.campaigns || []).reduce((a, c) => a + (c.inbox || 0), 0); b.textContent = n || ''; } }
 async function loadLeads() { state.leads = await api('GET', '/api/leads'); const b = $('#badge-leads'); if (b) b.textContent = state.leads.length || ''; }
 
 // ============================================================
@@ -1657,6 +1859,7 @@ async function loadLeads() { state.leads = await api('GET', '/api/leads'); const
     state.users = await api('GET', '/api/users');
     await loadLeads();
     await loadTasks();
+    await loadCampaigns();
     window.addEventListener('hashchange', syncHash);
     syncHash(); // fija la vista desde el hash (o kanban por defecto) y renderiza
   } catch (e) {
@@ -1670,10 +1873,12 @@ function syncHash() {
   const h = location.hash.replace(/^#/, '');
   const m = h.match(/^lead-(\d+)$/);
   const pm = h.match(/^post-(\d+|new)$/);
+  const cm = h.match(/^project-(\d+)$/);
   if (!pm) window.onbeforeunload = null;   // el aviso de cambios sin guardar es solo del editor de posts
   if (m) { state.detailId = Number(m[1]); state.view = 'leadDetail'; }
   else if (pm) { state.postId = pm[1] === 'new' ? 'new' : Number(pm[1]); state.view = 'postEdit'; }
-  else if (['kanban', 'leads', 'tasks', 'students', 'stats', 'users', 'redirects', 'config', 'blog'].includes(h)) { state.view = h; }
+  else if (cm) { state.projectId = Number(cm[1]); state.view = 'projectDetail'; }
+  else if (['kanban', 'leads', 'projects', 'tasks', 'students', 'stats', 'users', 'redirects', 'config', 'blog'].includes(h)) { state.view = h; }
   else if (state.view === 'leadDetail') { state.view = 'leads'; }
   renderApp();
 }

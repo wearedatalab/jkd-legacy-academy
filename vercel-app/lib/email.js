@@ -33,7 +33,7 @@ function magicLinkHtml({ name, link }) {
   </td></tr></table></body></html>`;
 }
 
-function leadNotifyHtml({ lead, crmLink }) {
+function leadNotifyHtml({ lead, crmLink, campaign }) {
   const name = [lead.first_name, lead.last_name].filter(Boolean).join(' ') || 'New contact';
   const rows = [
     ['Name', name],
@@ -42,6 +42,7 @@ function leadNotifyHtml({ lead, crmLink }) {
     ['Location', lead.location],
     ['Experience / path', lead.experience],
     ['Message', lead.message],
+    ['Campaign', campaign && campaign.name],
     ['Source', lead.source],
     ['Channel', lead.channel],
     ['Date', lead.created_label],
@@ -56,17 +57,20 @@ function leadNotifyHtml({ lead, crmLink }) {
     <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#14161c;border:1px solid #262a33;border-radius:14px;overflow:hidden">
       <tr><td style="padding:26px 32px 6px">
         <div style="font-family:Georgia,serif;color:#f4f1ea;font-size:20px;font-weight:600">The JKD Legacy Academy</div>
-        <div style="color:#9ec19a;font-size:11px;letter-spacing:.18em;text-transform:uppercase;margin-top:3px">New sign-up from the website</div>
+        <div style="color:${campaign ? '#f4c430' : '#9ec19a'};font-size:11px;letter-spacing:.18em;text-transform:uppercase;margin-top:3px">${campaign ? 'Campaign registration · ' + ESC(campaign.name) : 'New sign-up from the website'}</div>
       </td></tr>
+      ${campaign ? `<tr><td style="padding:14px 32px 0"><div style="background:#2a2410;border:1px solid #5c4b12;border-radius:10px;padding:12px 14px;color:#f4e3a1;font-size:14px;line-height:1.55">
+        <b>This registration comes from the campaign “${ESC(campaign.name)}”.</b> It is waiting in <b>Projects</b> in the panel and is <b>not in the pipeline yet</b>. Move it to the pipeline when you want to follow it up as a new lead.
+      </div></td></tr>` : ''}
       <tr><td style="padding:10px 32px 4px;color:#c2bdb1;font-size:15px;line-height:1.6">
-        A new person signed up through the website form. Here are their details:
+        ${campaign ? 'A new person registered through the campaign landing page. Here are their details:' : 'A new person signed up through the website form. Here are their details:'}
       </td></tr>
       <tr><td style="padding:14px 32px 6px">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #23262e">${rows}</table>
       </td></tr>
       ${mailto ? `<tr><td style="padding:6px 32px 2px;color:#837e72;font-size:12px">You can reply to this email or write to them directly: ${mailto}</td></tr>` : ''}
       <tr><td style="padding:18px 32px 8px">
-        <a href="${ESC(crmLink)}" style="display:inline-block;background:#2f7be0;color:#fff;text-decoration:none;font-weight:600;font-size:15px;padding:13px 26px;border-radius:100px">View in the panel →</a>
+        <a href="${ESC(crmLink)}" style="display:inline-block;background:#2f7be0;color:#fff;text-decoration:none;font-weight:600;font-size:15px;padding:13px 26px;border-radius:100px">${campaign ? 'Open the project →' : 'View in the panel →'}</a>
       </td></tr>
       <tr><td style="padding:6px 32px 26px;color:#5b5750;font-size:12px;line-height:1.6">
         Automated notification from the JKD Legacy panel.
@@ -77,7 +81,7 @@ function leadNotifyHtml({ lead, crmLink }) {
 
 // Notifies administrators when a new lead comes in. Best-effort: never throws.
 // `to` can be an array of emails. Returns { ok, ... }.
-export async function sendLeadNotification({ to, lead, crmLink }) {
+export async function sendLeadNotification({ to, lead, crmLink, campaign }) {
   const key = process.env.RESEND_API_KEY;
   const from = process.env.MAIL_FROM || 'JKD Legacy <onboarding@resend.dev>';
   const recipients = (Array.isArray(to) ? to : [to]).map((x) => String(x || '').trim()).filter(Boolean);
@@ -86,8 +90,8 @@ export async function sendLeadNotification({ to, lead, crmLink }) {
   try {
     const payload = {
       from, to: recipients,
-      subject: `New sign-up on the website — ${name}`,
-      html: leadNotifyHtml({ lead: lead || {}, crmLink: crmLink || '' }),
+      subject: campaign ? `[Campaign: ${campaign.name}] New registration — ${name}` : `New sign-up on the website — ${name}`,
+      html: leadNotifyHtml({ lead: lead || {}, crmLink: crmLink || '', campaign: campaign || null }),
     };
     if (lead && lead.email) payload.reply_to = lead.email;
     const resp = await fetch('https://api.resend.com/emails', {

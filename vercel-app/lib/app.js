@@ -154,6 +154,7 @@ async function ensureSchema() {
     `CREATE TABLE IF NOT EXISTS rate_hits (bucket TEXT PRIMARY KEY, count INTEGER NOT NULL, window_start TEXT NOT NULL)`,
     `CREATE TABLE IF NOT EXISTS tasks (id INTEGER PRIMARY KEY, lead_id INTEGER, title TEXT NOT NULL, due_at TEXT, status TEXT NOT NULL DEFAULT 'pendiente', owner_id INTEGER, created_by INTEGER, created_at TEXT NOT NULL, done_at TEXT)`,
     `CREATE TABLE IF NOT EXISTS memberships (id INTEGER PRIMARY KEY, token TEXT NOT NULL UNIQUE, first_name TEXT, last_name TEXT, email TEXT, phone TEXT, date_of_birth TEXT, minor INTEGER NOT NULL DEFAULT 0, data TEXT NOT NULL, created_at TEXT NOT NULL)`,
+    `CREATE TABLE IF NOT EXISTS campaigns (id INTEGER PRIMARY KEY, name TEXT NOT NULL, source TEXT NOT NULL UNIQUE, landing TEXT, description TEXT, status TEXT NOT NULL DEFAULT 'active', created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`,
     `CREATE INDEX IF NOT EXISTS idx_leads_updated ON leads(updated_at)`,
     `CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status)`,
     `CREATE INDEX IF NOT EXISTS idx_events_lead ON lead_events(lead_id)`,
@@ -162,9 +163,12 @@ async function ensureSchema() {
   ]);
   // Migraciones idempotentes para BDs preexistentes (columnas ya incluidas arriba en BDs nuevas)
   for (const stmt of ['ALTER TABLE leads ADD COLUMN attribution TEXT', 'ALTER TABLE sessions ADD COLUMN impersonator_id INTEGER',
-    'ALTER TABLE leads ADD COLUMN unsubscribed INTEGER NOT NULL DEFAULT 0', 'ALTER TABLE leads ADD COLUMN unsubscribed_at TEXT']) {
+    'ALTER TABLE leads ADD COLUMN unsubscribed INTEGER NOT NULL DEFAULT 0', 'ALTER TABLE leads ADD COLUMN unsubscribed_at TEXT',
+    'ALTER TABLE leads ADD COLUMN campaign_id INTEGER', 'ALTER TABLE leads ADD COLUMN campaign_state TEXT', 'ALTER TABLE leads ADD COLUMN campaign_moved_at TEXT']) {
     try { await db.run(stmt); } catch (e) { /* la columna ya existe */ }
   }
+  try { await db.run('CREATE INDEX IF NOT EXISTS idx_leads_campaign ON leads(campaign_id, campaign_state)'); } catch (e) {}
+  await ensureCampaignSeed();
 }
 async function seed() {
   const c = await db.get('SELECT COUNT(*) c FROM users');
@@ -619,7 +623,7 @@ async function sendTaskReminders() {
 }
 
 async function buildStats(monthArg) {
-  const distinct = (await db.all(`SELECT DISTINCT substr(created_at,1,7) m FROM leads WHERE created_at IS NOT NULL`)).map((r) => r.m);
+  const distinct = (await db.all(`SELECT DISTINCT substr(created_at,1,7) m FROM ${PIPE_LEADS} leads WHERE created_at IS NOT NULL`)).map((r) => r.m);
   const curMonth = new Date().toISOString().slice(0, 7);
   const availableMonths = Array.from(new Set([...distinct, curMonth])).sort();
   const month = monthArg && availableMonths.includes(monthArg) ? monthArg : null;
@@ -627,32 +631,32 @@ async function buildStats(monthArg) {
   const inMonthW = month ? ` WHERE substr(created_at,1,7)='${month}'` : '';
 
   const funnel = {};
-  for (const s of STATUSES) funnel[s] = Number((await db.get(`SELECT COUNT(*) c FROM leads WHERE status=?${inMonth}`, [s])).c);
-  const total = Number((await db.get(`SELECT COUNT(*) c FROM leads${inMonthW}`)).c);
+  for (const s of STATUSES) funnel[s] = Number((await db.get(`SELECT COUNT(*) c FROM ${PIPE_LEADS} leads WHERE status=?${inMonth}`, [s])).c);
+  const total = Number((await db.get(`SELECT COUNT(*) c FROM ${PIPE_LEADS} leads${inMonthW}`)).c);
 
   const months = [];
   const d0 = new Date();
   for (let i = 5; i >= 0; i--) months.push(new Date(d0.getFullYear(), d0.getMonth() - i, 1).toISOString().slice(0, 7));
   const map = (rows) => Object.fromEntries(rows.map((r) => [r.m, Number(r.c)]));
-  const cM = map(await db.all(`SELECT substr(created_at,1,7) m, COUNT(*) c FROM leads GROUP BY m`));
+  const cM = map(await db.all(`SELECT substr(created_at,1,7) m, COUNT(*) c FROM ${PIPE_LEADS} leads GROUP BY m`));
   // Ganados/perdidos por mes = leads que HOY están en ese estado, atribuidos al mes de su ÚLTIMA
   // transición a él. Así reconcilia con el pipeline (suma mensual = total actual) y no se infla por
   // transiciones intermedias (p. ej. un lead ganado→perdido ya NO cuenta como ganado).
-  const wM = map(await db.all(`SELECT substr(t,1,7) m, COUNT(*) c FROM (SELECT MAX(e.created_at) t FROM leads l JOIN lead_events e ON e.lead_id=l.id AND e.type='status' AND e.to_status='ganado' WHERE l.status='ganado' GROUP BY l.id) GROUP BY m`));
-  const lM = map(await db.all(`SELECT substr(t,1,7) m, COUNT(*) c FROM (SELECT MAX(e.created_at) t FROM leads l JOIN lead_events e ON e.lead_id=l.id AND e.type='status' AND e.to_status='perdido' WHERE l.status='perdido' GROUP BY l.id) GROUP BY m`));
+  const wM = map(await db.all(`SELECT substr(t,1,7) m, COUNT(*) c FROM (SELECT MAX(e.created_at) t FROM ${PIPE_LEADS} l JOIN lead_events e ON e.lead_id=l.id AND e.type='status' AND e.to_status='ganado' WHERE l.status='ganado' GROUP BY l.id) GROUP BY m`));
+  const lM = map(await db.all(`SELECT substr(t,1,7) m, COUNT(*) c FROM (SELECT MAX(e.created_at) t FROM ${PIPE_LEADS} l JOIN lead_events e ON e.lead_id=l.id AND e.type='status' AND e.to_status='perdido' WHERE l.status='perdido' GROUP BY l.id) GROUP BY m`));
   const monthly = months.map((m) => {
     const created = cM[m] || 0, won = wM[m] || 0, lost = lM[m] || 0;
     const resolved = won + lost;
     return { month: m, created, won, lost, conversion: resolved ? Math.round((won / resolved) * 100) : 0 };
   });
 
-  const lossRows = await db.all(`SELECT loss_reason r, COUNT(*) c FROM leads WHERE status='perdido' AND loss_reason IS NOT NULL${inMonth} GROUP BY r ORDER BY c DESC`);
+  const lossRows = await db.all(`SELECT loss_reason r, COUNT(*) c FROM ${PIPE_LEADS} leads WHERE status='perdido' AND loss_reason IS NOT NULL${inMonth} GROUP BY r ORDER BY c DESC`);
   const lossBreakdown = lossRows.map((r) => ({ key: r.r, label: LOSS_REASONS[r.r] || r.r, count: Number(r.c) }));
 
   let won, lost;
   if (month) {
-    won = Number((await db.get(`SELECT COUNT(*) c FROM (SELECT MAX(e.created_at) t FROM leads l JOIN lead_events e ON e.lead_id=l.id AND e.type='status' AND e.to_status='ganado' WHERE l.status='ganado' GROUP BY l.id) WHERE substr(t,1,7)=?`, [month])).c);
-    lost = Number((await db.get(`SELECT COUNT(*) c FROM (SELECT MAX(e.created_at) t FROM leads l JOIN lead_events e ON e.lead_id=l.id AND e.type='status' AND e.to_status='perdido' WHERE l.status='perdido' GROUP BY l.id) WHERE substr(t,1,7)=?`, [month])).c);
+    won = Number((await db.get(`SELECT COUNT(*) c FROM (SELECT MAX(e.created_at) t FROM ${PIPE_LEADS} l JOIN lead_events e ON e.lead_id=l.id AND e.type='status' AND e.to_status='ganado' WHERE l.status='ganado' GROUP BY l.id) WHERE substr(t,1,7)=?`, [month])).c);
+    lost = Number((await db.get(`SELECT COUNT(*) c FROM (SELECT MAX(e.created_at) t FROM ${PIPE_LEADS} l JOIN lead_events e ON e.lead_id=l.id AND e.type='status' AND e.to_status='perdido' WHERE l.status='perdido' GROUP BY l.id) WHERE substr(t,1,7)=?`, [month])).c);
   } else { won = funnel.ganado; lost = funnel.perdido; }
   const winRate = won + lost ? Math.round((won / (won + lost)) * 100) : 0;
   const newThisMonth = month ? total : (cM[months[months.length - 1]] || 0);
@@ -662,7 +666,51 @@ async function buildStats(monthArg) {
 
 async function leadRow(r) {
   const owner = r.owner_id ? await db.get('SELECT name FROM users WHERE id=?', [r.owner_id]) : null;
-  return { ...r, owner_name: owner ? owner.name : null };
+  const camp = r.campaign_id ? await db.get('SELECT name FROM campaigns WHERE id=?', [r.campaign_id]) : null;
+  return { ...r, owner_name: owner ? owner.name : null, campaign_name: camp ? camp.name : null };
+}
+
+// ---------------- Proyectos (campañas) ----------------
+// Cada campaña tiene un `source` único: el formulario de su landing lo envía y así el lead llega a su proyecto.
+// Un lead de campaña queda en la bandeja del proyecto (campaign_state='inbox') y NO aparece en el pipeline,
+// la lista de leads ni las estadísticas hasta que alguien lo mueve (campaign_state='pipeline'). Conserva su campaña.
+const PIPE_WHERE = "(campaign_id IS NULL OR campaign_state='pipeline')";
+const PIPE_LEADS = `(SELECT * FROM leads WHERE ${PIPE_WHERE})`;
+const CAMPAIGN_SOURCE_RE = /^[a-z0-9][a-z0-9-]{1,58}$/;
+const SEED_CAMPAIGNS = [
+  { name: 'Bruce Lee Birthday 2026', source: 'bruce-lee-birthday', landing: '/bruce-lee-birthday',
+    description: "The Dragon's Birthday Experience · free event, Saturday 28 Nov 2026, 9:30–11:30 am" },
+];
+async function ensureCampaignSeed() {
+  for (const c of SEED_CAMPAIGNS) {
+    if (await db.get('SELECT id FROM campaigns WHERE source=?', [c.source])) continue;
+    const t = nowISO();
+    const r = await db.run('INSERT INTO campaigns (name,source,landing,description,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?)',
+      [c.name, c.source, c.landing, c.description, 'active', t, t]);
+    await claimLeadsForCampaign(r.lastInsertRowid, c.source);
+  }
+}
+// Los leads que ya existían con ese origen pasan a la bandeja del proyecto (salen del pipeline)
+async function claimLeadsForCampaign(id, source) {
+  const r = await db.run("UPDATE leads SET campaign_id=?, campaign_state='inbox' WHERE source=? AND campaign_id IS NULL", [id, source]);
+  return Number(r.changes || r.rowsAffected || 0);
+}
+async function campaignList() {
+  const rows = await db.all(`SELECT c.*,
+      (SELECT COUNT(*) FROM leads l WHERE l.campaign_id=c.id) total,
+      (SELECT COUNT(*) FROM leads l WHERE l.campaign_id=c.id AND l.campaign_state='inbox') inbox,
+      (SELECT MAX(l.created_at) FROM leads l WHERE l.campaign_id=c.id) last_at
+    FROM campaigns c ORDER BY (c.status<>'active'), datetime(c.created_at) DESC`);
+  return rows.map((c) => ({ ...c, total: Number(c.total || 0), inbox: Number(c.inbox || 0) }));
+}
+function campaignInput(b) {
+  const out = {};
+  if ('name' in b) out.name = cap(b.name, 120);
+  if ('source' in b) out.source = String(b.source || '').trim().toLowerCase().slice(0, 60);
+  if ('landing' in b) out.landing = cap(b.landing, 300);
+  if ('description' in b) out.description = cap(b.description, 500);
+  if ('status' in b) out.status = b.status === 'archived' ? 'archived' : 'active';
+  return out;
 }
 
 // ---------------- Router ----------------
@@ -817,6 +865,13 @@ export async function handle(req, res) {
           await db.run(`INSERT INTO lead_events (lead_id,type,note,created_at) VALUES (?, 'unsubscribe', ?, ?)`, [r.lastInsertRowid, 'Previously unsubscribed (same email) — do not contact', t]);
         }
       }
+      // Proyectos: si el origen corresponde a una campaña, el lead queda en su bandeja (fuera del pipeline)
+      const camp = await db.get('SELECT id, name FROM campaigns WHERE source=?', [cap(b.source, 60) || 'website']);
+      if (camp) {
+        await db.run("UPDATE leads SET campaign_id=?, campaign_state='inbox' WHERE id=?", [camp.id, r.lastInsertRowid]);
+        await db.run(`INSERT INTO lead_events (lead_id,type,note,created_at) VALUES (?, 'campaign', ?, ?)`,
+          [r.lastInsertRowid, `Campaign: ${camp.name} — waiting in Projects`, t]);
+      }
       // Notifica por correo a TODOS los administradores (best-effort: nunca rompe la captura del lead).
       try {
         const admins = await db.all("SELECT email FROM users WHERE role='admin' AND active=1");
@@ -824,7 +879,8 @@ export async function handle(req, res) {
         if (to.length) {
           await sendLeadNotification({
             to,
-            crmLink: `${baseUrl(req)}/crm`,
+            crmLink: camp ? `${baseUrl(req)}/crm#project-${camp.id}` : `${baseUrl(req)}/crm`,
+            campaign: camp ? { name: camp.name } : null,
             lead: {
               first_name: cap(b.first_name, 120), last_name: cap(b.last_name, 120), email,
               phone: cap(b.phone, 60), location: cap(b.location, 120), experience: cap(b.experience, 80),
@@ -911,7 +967,7 @@ export async function handle(req, res) {
     if (p === '/api/leads' && method === 'GET') {
       const status = url.searchParams.get('status');
       const qraw = (url.searchParams.get('q') || '').toLowerCase().slice(0, 80);
-      const clauses = []; const args = [];
+      const clauses = ["(l.campaign_id IS NULL OR l.campaign_state='pipeline')"]; const args = [];   // la bandeja de Proyectos no entra
       if (status && STATUSES.includes(status)) { clauses.push('l.status=?'); args.push(status); }
       if (qraw) {
         const like = '%' + qraw.replace(/[\\%_]/g, (m) => '\\' + m) + '%';
@@ -931,6 +987,67 @@ export async function handle(req, res) {
         [cap(b.first_name, 120), cap(b.last_name, 120), cap(b.email, 160), cap(b.phone, 60), cap(b.location, 120), cap(b.experience, 80), cap(b.message, 2000), cap(b.source, 60) || 'manual', b.owner_id || user.id, t, t]);
       await db.run(`INSERT INTO lead_events (lead_id,type,to_status,user_id,created_at) VALUES (?, 'created','registrado',?,?)`, [r.lastInsertRowid, user.id, t]);
       return json(res, 201, await leadRow(await db.get('SELECT * FROM leads WHERE id=?', [r.lastInsertRowid])));
+    }
+    // ---- Proyectos (campañas)
+    if (p === '/api/campaigns' && method === 'GET') return json(res, 200, await campaignList());
+    if (p === '/api/campaigns' && method === 'POST') {
+      if (user.role !== 'admin') return json(res, 403, { error: 'forbidden' });
+      const b = await readBody(req);
+      const c = campaignInput(b);
+      if (!c.name) return json(res, 400, { error: 'Name is required' });
+      if (!CAMPAIGN_SOURCE_RE.test(c.source || '')) return json(res, 400, { error: 'Source key: lowercase letters, numbers and dashes' });
+      if (await db.get('SELECT id FROM campaigns WHERE source=?', [c.source])) return json(res, 409, { error: 'That source key is already used by another campaign' });
+      const t = nowISO();
+      const r = await db.run('INSERT INTO campaigns (name,source,landing,description,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?)',
+        [c.name, c.source, c.landing || '', c.description || '', c.status || 'active', t, t]);
+      const claimed = b.claim_existing ? await claimLeadsForCampaign(r.lastInsertRowid, c.source) : 0;
+      return json(res, 201, { ...(await db.get('SELECT * FROM campaigns WHERE id=?', [r.lastInsertRowid])), claimed });
+    }
+    const campMatch = p.match(/^\/api\/campaigns\/(\d+)(\/leads)?$/);
+    if (campMatch) {
+      const cid = Number(campMatch[1]);
+      const camp = await db.get('SELECT * FROM campaigns WHERE id=?', [cid]);
+      if (!camp) return json(res, 404, { error: 'not found' });
+      if (campMatch[2] && method === 'GET') {
+        const rows = await db.all(`SELECT l.*, u.name owner_name FROM leads l LEFT JOIN users u ON u.id=l.owner_id
+          WHERE l.campaign_id=? ORDER BY datetime(l.created_at) DESC LIMIT 5000`, [cid]);
+        return json(res, 200, { campaign: (await campaignList()).find((x) => x.id === cid) || camp, leads: rows });
+      }
+      if (!campMatch[2] && method === 'PATCH') {
+        if (user.role !== 'admin') return json(res, 403, { error: 'forbidden' });
+        const c = campaignInput(await readBody(req));
+        if ('name' in c && !c.name) return json(res, 400, { error: 'Name is required' });
+        if ('source' in c) {
+          if (!CAMPAIGN_SOURCE_RE.test(c.source)) return json(res, 400, { error: 'Source key: lowercase letters, numbers and dashes' });
+          if (await db.get('SELECT id FROM campaigns WHERE source=? AND id<>?', [c.source, cid])) return json(res, 409, { error: 'That source key is already used by another campaign' });
+        }
+        const keys = Object.keys(c);
+        if (keys.length) await db.run(`UPDATE campaigns SET ${keys.map((k) => k + '=?').join(',')}, updated_at=? WHERE id=?`, [...keys.map((k) => c[k]), nowISO(), cid]);
+        return json(res, 200, await db.get('SELECT * FROM campaigns WHERE id=?', [cid]));
+      }
+      if (!campMatch[2] && method === 'DELETE') {
+        if (user.role !== 'admin') return json(res, 403, { error: 'forbidden' });
+        const n = Number((await db.get('SELECT COUNT(*) c FROM leads WHERE campaign_id=?', [cid])).c);
+        if (n) return json(res, 409, { error: 'This campaign has registrations. Archive it instead.' });
+        await db.run('DELETE FROM campaigns WHERE id=?', [cid]);
+        return json(res, 200, { ok: true });
+      }
+    }
+    // Mover leads de la bandeja de un proyecto al pipeline (uno o varios). Entran en su estado actual (Registrado).
+    if (p === '/api/campaigns/move-to-pipeline' && method === 'POST') {
+      const b = await readBody(req);
+      const ids = (Array.isArray(b.ids) ? b.ids : []).map(Number).filter((x) => Number.isInteger(x) && x > 0).slice(0, 1000);
+      if (!ids.length) return json(res, 400, { error: 'no leads' });
+      const t = nowISO();
+      let moved = 0;
+      for (const id of ids) {
+        const l = await db.get("SELECT l.id, c.name cname FROM leads l LEFT JOIN campaigns c ON c.id=l.campaign_id WHERE l.id=? AND l.campaign_state='inbox'", [id]);
+        if (!l) continue;
+        await db.run("UPDATE leads SET campaign_state='pipeline', campaign_moved_at=?, updated_at=?, owner_id=COALESCE(owner_id, ?) WHERE id=?", [t, t, b.assign_me ? user.id : null, id]);
+        await db.run(`INSERT INTO lead_events (lead_id,type,note,user_id,created_at) VALUES (?, 'to_pipeline', ?, ?, ?)`, [id, `Moved to the pipeline from ${l.cname || 'a campaign'}`, user.id, t]);
+        moved++;
+      }
+      return json(res, 200, { ok: true, moved });
     }
     const leadMatch = p.match(/^\/api\/leads\/(\d+)(\/status|\/note)?$/);
     if (leadMatch) {
@@ -970,6 +1087,12 @@ export async function handle(req, res) {
         const t = nowISO();
         await db.run('UPDATE leads SET status=?, loss_reason=?, updated_at=? WHERE id=?', [status, loss, t, id]);
         await db.run(`INSERT INTO lead_events (lead_id,type,from_status,to_status,loss_reason,user_id,created_at) VALUES (?, 'status',?,?,?,?,?)`, [id, lead.status, status, loss, user.id, t]);
+        // Trabajar un lead que seguía en la bandeja de un proyecto lo pasa al pipeline (si no, quedaría oculto)
+        if (lead.campaign_state === 'inbox') {
+          const cn = await db.get('SELECT name FROM campaigns WHERE id=?', [lead.campaign_id]);
+          await db.run("UPDATE leads SET campaign_state='pipeline', campaign_moved_at=? WHERE id=?", [t, id]);
+          await db.run(`INSERT INTO lead_events (lead_id,type,note,user_id,created_at) VALUES (?, 'to_pipeline', ?, ?, ?)`, [id, `Moved to the pipeline from ${cn ? cn.name : 'a campaign'}`, user.id, t]);
+        }
         return json(res, 200, await leadRow(await db.get('SELECT * FROM leads WHERE id=?', [id])));
       }
       if (sub === '/note' && method === 'POST') {

@@ -452,3 +452,30 @@ td .lead-nm{font-family:var(--serif);color:var(--text);font-size:1rem}
 .k-nav{display:inline-flex;gap:6px}
 .k-nav .btn{padding:7px 13px;font-size:.9rem;line-height:1}
 @media(max-width:1080px){.kanban{grid-template-columns:none;grid-auto-columns:minmax(250px,80vw)}}
+
+/* ---------- Projects (campañas) ---------- */
+.badge-camp{background:#f4c430!important;color:#0b0c10!important}
+.pj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.pj-card{text-align:left;background:var(--ink-2);border:1px solid var(--line);border-radius:var(--r-lg);padding:18px 18px 14px;cursor:pointer;color:var(--text);font:inherit;display:flex;flex-direction:column;gap:10px;transition:border-color .15s,transform .15s}
+.pj-card:hover{border-color:#f4c430;transform:translateY(-2px)}
+.pj-card.archived{opacity:.6}
+.pj-top{display:flex;justify-content:space-between;align-items:center}
+.pj-new{font-family:var(--mono);font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;background:#f4c430;color:#0b0c10;font-weight:700;padding:4px 9px;border-radius:100px}
+.pj-card h3{font-family:var(--serif);font-weight:400;font-size:1.3rem;margin:0}
+.pj-card p{margin:0;color:var(--dim);font-size:.84rem;line-height:1.5}
+.pj-nums{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:10px 0}
+.pj-nums b{display:block;font-family:var(--serif);font-weight:400;font-size:1.5rem;line-height:1.1}
+.pj-nums div:first-child b{color:#f4c430}
+.pj-nums span{font-family:var(--mono);font-size:.56rem;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.pj-foot{display:flex;justify-content:space-between;gap:10px;font-size:.74rem;color:var(--mute)}
+.pj-foot code,.detail-sub code{font-size:.74rem;color:var(--dim)}
+.pj-bulk{display:flex;align-items:center;gap:10px;margin:0 0 12px;padding:10px 14px;border:1px solid #5c4b12;background:#2a2410;border-radius:10px;color:#f4e3a1;font-size:.86rem}
+.pj-bulk[hidden]{display:none}
+.pj-bulk #pj-sel-n{margin-right:auto}
+.pj-row{cursor:pointer}
+.pj-row:hover td{background:var(--surface,rgba(255,255,255,.02))}
+.ld-tabs .cnt{margin-left:6px;color:var(--mute)}
+.camp-tag{color:#f4c430}
+.camp-banner{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:0 0 16px;padding:12px 16px;border:1px solid #5c4b12;background:#2a2410;border-radius:10px;color:#f4e3a1;font-size:.9rem}
+.tl.campaign .dot{background:#f4c430}
+.cp-check{display:flex;gap:9px;align-items:center;font-size:.86rem;color:var(--dim);margin:6px 0 4px}
