@@ -26,13 +26,15 @@
   }
 
   // ---- Botones que bajan al formulario (cta_click con cta_name y cta_location)
+  let autoFocus = false;   // true mientras el script pone el foco en «Nombre» tras un clic en un botón
   const navH = () => { const n = document.querySelector('.nav'); return n ? n.getBoundingClientRect().height : 0; };
   const goToForm = () => {
     const top = form.getBoundingClientRect().top + window.scrollY - navH() - 14;
     window.scrollTo({ top: Math.max(0, top), behavior: reduce ? 'auto' : 'smooth' });
     form.classList.remove('flash'); void form.offsetWidth; form.classList.add('flash');
     const first = $f('lf-name');
-    setTimeout(() => first && first.focus({ preventScroll: true }), reduce ? 0 : 650);
+    // Foco automático: NO cuenta como form_start (eso es cuando la persona toca un campo)
+    setTimeout(() => { if (!first) return; autoFocus = true; first.focus({ preventScroll: true }); autoFocus = false; }, reduce ? 0 : 650);
   };
   document.querySelectorAll('a[data-book-cta]').forEach((a) => a.addEventListener('click', (e) => {
     e.preventDefault();
@@ -53,7 +55,7 @@
   // ---- form_start: al tocar el primer campo (una vez por carga)
   let started = false;
   form.addEventListener('focusin', (e) => {
-    if (started || !e.target || !e.target.id || e.target.type === 'submit') return;
+    if (started || autoFocus || !e.target || !e.target.id || e.target.type === 'submit') return;
     started = true;
     track('form_start', { first_field: e.target.id.replace(/^lf-(x-)?/, '').replace(/-cc$/, '') });
   });
@@ -78,7 +80,8 @@
     const bad = fieldsOf().filter((el) => !el.checkValidity());
     fieldsOf().forEach((el) => (bad.includes(el) ? el.setAttribute('aria-invalid', 'true') : el.removeAttribute('aria-invalid')));
     if (bad.length) {
-      track('form_error', { error_type: 'validation', error_field: labelOf(bad[0]) });
+      // Clave fija del campo (name, phone, email, goal…): en GA4 no se parte en dos por el idioma
+      track('form_error', { error_type: 'validation', error_field: bad[0].id.replace(/^lf-(x-)?/, '').replace(/-cc$/, '') });
       errBox.textContent = L.check + bad.map(labelOf).join(', ') + '.';
       errBox.hidden = false;
       bad[0].focus();
@@ -112,7 +115,9 @@
     };
     const thanks = (id) => {
       const u = thanksUrl(id);
-      return u + (u.indexOf('?') > -1 ? '&' : '?') + 'form_type=' + encodeURIComponent(formType) + (ES ? '&lang=es' : '');
+      // jkd_debug pasa a /thanks: en modo prueba la conversión se revisa allí sin enviar nada a GA4/Ads/Meta
+      return u + (u.indexOf('?') > -1 ? '&' : '?') + 'form_type=' + encodeURIComponent(formType) + (ES ? '&lang=es' : '')
+        + (new URLSearchParams(location.search).has('jkd_debug') ? '&jkd_debug=1' : '');
     };
     if (window.JKD_NO_BACKEND) { window.location.href = thanks(); return; }
     btn.disabled = true; btn.textContent = L.sending;
