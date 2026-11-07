@@ -69,7 +69,9 @@
       const want = preselect[a.dataset.bookCta] || preselect['*'];
       if (want && sw.value !== want) { sw.value = want; applyVariant(); }
     }
-    track('cta_click', { cta_text: (a.textContent || '').replace(/[→↗]/g, '').replace(/\s+/g, ' ').trim().slice(0, 80), cta_location: a.dataset.bookCta, link_url: '#book' });
+    // En los enlaces del menú desplegable solo cuenta el título (.sub-t), no la descripción de abajo
+    const label = a.querySelector('.sub-t') || a;
+    track('cta_click', { cta_text: (label.textContent || '').replace(/[→↗]/g, '').replace(/\s+/g, ' ').trim().slice(0, 80), cta_location: a.dataset.bookCta, link_url: '#book' });
     // Con el menú móvil abierto, cerrarlo antes de bajar
     const nav = document.querySelector('.nav.open');
     if (nav) { const t = document.querySelector('.nav-toggle'); if (t) t.click(); }

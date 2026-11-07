@@ -140,3 +140,12 @@
 .author-box img { width: 88px; height: 88px; border-radius: 50%; object-fit: cover; }
 .author-box strong { display: block; font-family: var(--serif); font-size: 1.15rem; color: var(--text); margin-bottom: 6px; }
 .prose .author-box p { font-size: .94rem; margin: 0 0 8px; }
+
+/* Rejillas de 2 y 4 columnas (landing de artes marciales para adultos: «Why adults…» y precios) */
+.cards-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; }
+.cards-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+.card .price { display: block; font-family: var(--serif); font-size: 2.2rem; line-height: 1; color: var(--text); margin: 10px 0 8px; }
+.paper .card .price { color: var(--ink); }
+@media (max-width: 980px) { .cards-4 { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 880px) { .cards-2 { grid-template-columns: 1fr; } }
+@media (max-width: 520px) { .cards-4 { grid-template-columns: 1fr; } }
