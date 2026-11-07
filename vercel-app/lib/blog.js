@@ -166,12 +166,14 @@ function shell(siteDir, lang) {
   const c = shellCache[lang];
   if (c && c.mtime === st.mtimeMs) return c;
   const html = fs.readFileSync(f, 'utf8');
-  const headEnd = html.indexOf('</head>'), mainStart = html.indexOf('<main>'), mainEnd = html.indexOf('</main>');
+  // <main> puede traer atributos (id="main" del enlace «Saltar al contenido»): se busca la etiqueta, no el texto exacto
+  const mainM = /<main\b[^>]*>/.exec(html);
+  const headEnd = html.indexOf('</head>'), mainStart = mainM ? mainM.index : -1, mainEnd = html.indexOf('</main>');
   if (headEnd < 0 || mainStart < 0 || mainEnd < 0) return null;
   const head = html.slice(0, headEnd).replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/g, '');
-  const top = html.slice(html.indexOf('<body>', headEnd), mainStart);
+  const top = html.slice(html.search(/<body\b/), mainStart);
   const bottom = html.slice(mainEnd);
-  return (shellCache[lang] = { mtime: st.mtimeMs, head, top, bottom });
+  return (shellCache[lang] = { mtime: st.mtimeMs, head, top, bottom, mainTag: mainM[0] });
 }
 
 function page(siteDir, lang, { path: p, title, desc, hero, ogType, schema, content }) {
@@ -193,7 +195,7 @@ function page(siteDir, lang, { path: p, title, desc, hero, ogType, schema, conte
     .replace(/href="\/blog"/, `href="${p}"`));
   const t = UI[lang];
   const float = `<a href="/free-trial" class="float-cta" id="floatCta" data-cta="float"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>${t.float}</span><span class="btn-arrow" aria-hidden="true">→</span></a>`;
-  return head + schema.map(ld).join('') + '\n</head>\n' + top + '<main>\n' + localize(content, lang) + '\n' + float + '\n' + sh.bottom;
+  return head + schema.map(ld).join('') + '\n</head>\n' + top + sh.mainTag + '\n' + localize(content, lang) + '\n' + float + '\n' + sh.bottom;
 }
 
 function crumbs(items, lang) {
