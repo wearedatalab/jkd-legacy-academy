@@ -658,3 +658,18 @@ if (/\/thanks(\.html)?$/.test(location.pathname)) {
     set('.thanks .note', es ? 'Te enviaremos un recordatorio antes del día. ¿Preguntas? Llámanos al ' + tel + '.' : 'We’ll send you a reminder before the day. Questions? Call us on ' + tel + '.');
   }
 }
+
+// ===== /thanks: solicitudes de información de las landings (form_type info_*, ver landing-form.js) =====
+// free_trial conserva el mensaje de la clase gratis (lo pone script.js con jkd_from = free-trial).
+if (/\/thanks(\.html)?$/.test(location.pathname)) {
+  const ftype = new URLSearchParams(location.search).get('form_type') || '';
+  if (/^info_[a-z_]{2,40}$/.test(ftype)) {
+    const es = document.documentElement.lang === 'es';
+    const set = (sel, html) => { const el = document.querySelector(sel); if (el) { el.removeAttribute('data-i18n'); el.removeAttribute('data-i18n-html'); el.innerHTML = html; } };
+    const tel = '<a href="tel:+61459785073" style="color:var(--text)">0459 785 073</a>';
+    set('.thanks .eyebrow', es ? 'Datos recibidos' : 'Details received');
+    set('.thanks h1', es ? '¡Gracias!<br><span class="text-accent">Recibimos tus datos</span>.' : 'Thanks!<br><span class="text-accent">We’ve received your details</span>.');
+    set('.thanks p.lead', es ? 'Te llamamos en menos de 24 horas.' : 'We’ll call you within 24 hours.');
+    set('.thanks .note', es ? '¿Preguntas? Llámanos al ' + tel + '.' : 'Questions? Call us on ' + tel + '.');
+  }
+}
