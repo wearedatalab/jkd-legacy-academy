@@ -112,8 +112,9 @@
       track('form_error', { error_type: 'validation', error_field: bad[0].id.replace(/^lf-(x-)?/, '').replace(/-cc$/, '') });
       errBox.textContent = L.check + bad.map(labelOf).join(', ') + '.';
       errBox.hidden = false;
+      // Sin la burbuja nativa del navegador (salía en el idioma del navegador, no en el de la página):
+      // el mensaje va junto a cada campo (script.js) y en el resumen de arriba.
       bad[0].focus();
-      if (bad[0].reportValidity) bad[0].reportValidity();
       return;
     }
     const name = $f('lf-name').value.trim().replace(/\s+/g, ' ');
