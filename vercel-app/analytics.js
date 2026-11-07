@@ -6,7 +6,7 @@
 
    - Páginas normales: la carga se difiere (1ª interacción o 10 s tras el load) para no
      penalizar LCP/TBT.
-   - /thanks: SIN retraso. Dispara generate_lead con transaction_id = id del lead (?lid=),
+   - /thanks: SIN retraso. Dispara generate_lead SOLO con un lid válido (?lid= numérico), transaction_id = lid,
      envía user_data (correo + teléfono E.164) para conversiones avanzadas y Meta Lead con
      eventID = lid. Una recarga no vuelve a contar la conversión.
    - Clic en cualquier a[href^="tel:"] → evento GA4 phone_click (carga gtag si aún no está).
@@ -92,12 +92,16 @@
     var convKey = 'jkd_conv:' + (lid || 'nolid');
     var already = false, ud = null;
     if (isThanks) {
-      // Con lid: una vez por lead en este navegador. Sin lid: una vez por pestaña.
+      // Una vez por lead en este navegador (sin lid válido no hay conversión, ver validLid).
       try { already = lid ? localStorage.getItem(convKey) === '1' : sessionStorage.getItem(convKey) === '1'; } catch (e) {}
       try { ud = JSON.parse(sessionStorage.getItem('jkd_ud') || 'null'); } catch (e) {}
       if (already) log('conversión ya contada para', convKey, '— no se repite');
     }
-    var fireConversion = isThanks && !already;
+    // La conversión (generate_lead + Meta Lead) solo cuenta con un lid válido = id numérico del lead guardado en
+    // el CRM. Sin lid (visita directa a /thanks, recarga sin parámetros, bots) no se cuenta nada.
+    var validLid = /^\d{1,12}$/.test(lid);
+    if (isThanks && !validLid) log('sin lid válido — no se cuenta conversión');
+    var fireConversion = isThanks && validLid && !already;
     var fired = false;
 
     /* ---- Google: gtag (GA4 + Google Ads) ---- */
@@ -153,7 +157,7 @@
       fbq('init', cfg.meta_pixel_id);
       fbq('track', 'PageView');
       if (fireConversion) {
-        if (lid) fbq('track', 'Lead', {}, { eventID: lid }); else fbq('track', 'Lead');
+        fbq('track', 'Lead', {}, { eventID: lid });
         fired = true;
       }
       if (DEBUG) log('fbq queue:', JSON.stringify(fbq.queue.map(function (a) { return [].slice.call(a); })));

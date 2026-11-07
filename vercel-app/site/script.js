@@ -673,3 +673,50 @@ if (/\/thanks(\.html)?$/.test(location.pathname)) {
     set('.thanks .note', es ? '¿Preguntas? Llámanos al ' + tel + '.' : 'Questions? Call us on ' + tel + '.');
   }
 }
+
+// ===== Validación junto al campo (manual de buenas prácticas, sección 11) =====
+// Al salir de un campo con datos (o al enviar), el error aparece debajo del campo con icono y una indicación de cómo
+// resolverlo; se borra en cuanto el dato es válido. Complementa los envíos de #book, #trial-form y #bday-form
+// (sus scripts siguen validando y midiendo igual: este bloque solo agrega el mensaje accesible junto al campo).
+(() => {
+  const forms = ['book', 'trial-form', 'bday-form'].map((id) => document.getElementById(id)).filter(Boolean);
+  if (!forms.length) return;
+  const es = document.documentElement.lang === 'es';
+  const ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 7v6M12 16.5v.5"/></svg>';
+  const msg = (el) => {
+    const v = (el.value || '').trim();
+    if (el.tagName === 'SELECT') return es ? 'Elige una opción.' : 'Choose an option.';
+    if (el.type === 'email') return v ? (es ? 'Escribe el correo con el formato nombre@dominio.com.' : 'Write your email as name@domain.com.') : (es ? 'Escribe tu correo.' : 'Write your email.');
+    if (el.type === 'tel') return v ? (es ? 'Escribe un teléfono de al menos 8 dígitos.' : 'Write a phone number with at least 8 digits.') : (es ? 'Escribe tu teléfono.' : 'Write your phone number.');
+    if (/name/.test(el.id)) return es ? 'Escribe tu nombre.' : 'Write your name.';
+    return es ? 'Completa este campo.' : 'Fill in this field.';
+  };
+  const holder = (el) => el.closest('.form-group, .bd-f') || el.parentElement;
+  const show = (el) => {
+    const id = el.id + '-err';
+    let p = document.getElementById(id);
+    if (!p) { p = document.createElement('p'); p.className = 'fx-err'; p.id = id; holder(el).appendChild(p); }
+    p.innerHTML = ICON + '<span>' + msg(el) + '</span>';
+    el.setAttribute('aria-invalid', 'true');
+    const d = (el.getAttribute('aria-describedby') || '').split(' ').filter((x) => x && x !== id);
+    el.setAttribute('aria-describedby', d.concat(id).join(' '));
+  };
+  const clear = (el) => {
+    const p = document.getElementById(el.id + '-err');
+    if (p) p.remove();
+    el.removeAttribute('aria-invalid');
+    const d = (el.getAttribute('aria-describedby') || '').split(' ').filter((x) => x && x !== el.id + '-err');
+    if (d.length) el.setAttribute('aria-describedby', d.join(' ')); else el.removeAttribute('aria-describedby');
+  };
+  forms.forEach((form) => {
+    const fields = () => [...form.querySelectorAll('input:not([type=hidden]), select, textarea')].filter((el) => el.id && (el.required || el.pattern || el.type === 'email'));
+    form.addEventListener('focusout', (e) => {
+      const el = e.target;
+      if (!fields().includes(el) || !(el.value || '').trim()) return;   // vacío: se avisa al enviar, no al pasar con Tab
+      if (el.checkValidity()) clear(el); else show(el);
+    });
+    form.addEventListener('input', (e) => { const el = e.target; if (el.getAttribute('aria-invalid') === 'true' && el.checkValidity()) clear(el); });
+    form.addEventListener('change', (e) => { const el = e.target; if (el.getAttribute('aria-invalid') === 'true' && el.checkValidity()) clear(el); });
+    form.addEventListener('submit', () => { fields().forEach((el) => (el.checkValidity() ? clear(el) : show(el))); }, true);
+  });
+})();

@@ -7,10 +7,9 @@
   const form = document.getElementById('book');
   if (!form) return;
   const ES = document.documentElement.lang === 'es';
-  const formType = form.dataset.formType;
+  let formType = form.dataset.formType;      // puede cambiar según un campo (ver «variantes» más abajo)
   const formPage = form.dataset.formPage;
-  const base = { form_id: formType, form_type: formType, form_page: formPage };
-  const track = (name, p) => { try { jkdTrack(name, { ...base, ...(p || {}) }); } catch (e) {} };
+  const track = (name, p) => { try { jkdTrack(name, { form_id: formType, form_type: formType, form_page: formPage, ...(p || {}) }); } catch (e) {} };
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const $f = (id) => document.getElementById(id);
   const L = ES
@@ -18,6 +17,8 @@
         f: { name: 'nombre', phone: 'teléfono', email: 'correo', loc: 'ubicación', experience: 'experiencia' } }
     : { sending: 'Sending…', check: 'Please check: ', err: 'Something went wrong. Please call us on ',
         f: { name: 'name', phone: 'phone', email: 'email', loc: 'location', experience: 'experience' } };
+  const errBox = form.querySelector('.lf-error');
+  const btn = form.querySelector('.lf-submit');
 
   // Código de país: +61 ya viene en el HTML (funciona sin JS); aquí se agrega la lista completa
   const cc = $f('lf-phone-cc');
@@ -25,7 +26,32 @@
     cc.innerHTML = PHONE_CODES.map(([iso, dial, name]) => `<option value="${dial}"${iso === 'AU' ? ' selected' : ''} title="${name}">${dial} ${iso}</option>`).join('');
   }
 
-  // ---- Botones que bajan al formulario (cta_click con cta_name y cta_location)
+  // ---- Variantes: el tipo del formulario depende de un campo (mujeres: «I'm interested in» → free_trial o taller).
+  // Cambian form_type, el mensaje del CRM, el título, el subtítulo, el botón y el texto de privacidad (EN/ES).
+  const sw = form.dataset.switch ? $f(form.dataset.switch) : null;
+  let variants = {}, preselect = {};
+  try { variants = JSON.parse(form.dataset.variants || '{}'); preselect = JSON.parse(form.dataset.preselect || '{}'); } catch (e) {}
+  const setText = (el, txt) => {   // reemplaza solo el texto inicial (conserva la flecha del botón y el enlace de privacidad)
+    const n = el && [...el.childNodes].find((x) => x.nodeType === 3 && x.nodeValue.trim());
+    if (n) n.nodeValue = txt + ' ';
+  };
+  const applyVariant = () => {
+    const v = sw && (variants[sw.value] || variants['*']);
+    if (!v) return;
+    const t = v[ES ? 'es' : 'en'] || v.en;
+    formType = v.form_type;
+    form.dataset.formType = v.form_type;
+    form.dataset.message = v.message;
+    const hid = form.querySelector('input[name="form_type"]');
+    if (hid) hid.value = v.form_type;
+    $f('lf-h').textContent = t.title;
+    const sub = form.querySelector('.lf-sub'); if (sub) sub.textContent = t.sub;
+    setText(btn, t.submit);
+    setText(form.querySelector('.lf-privacy'), t.privacy);
+  };
+  if (sw) { sw.addEventListener('change', applyVariant); applyVariant(); }
+
+  // ---- Botones que bajan al formulario (cta_click con cta_text y cta_location)
   let autoFocus = false;   // true mientras el script pone el foco en «Nombre» tras un clic en un botón
   const navH = () => { const n = document.querySelector('.nav'); return n ? n.getBoundingClientRect().height : 0; };
   const goToForm = () => {
@@ -38,7 +64,12 @@
   };
   document.querySelectorAll('a[data-book-cta]').forEach((a) => a.addEventListener('click', (e) => {
     e.preventDefault();
-    track('cta_click', { cta_name: (a.textContent || '').replace(/[→↗]/g, '').replace(/\s+/g, ' ').trim().slice(0, 80), cta_location: a.dataset.bookCta, link_url: '#book' });
+    // El botón usado preselecciona la opción (mujeres: «Get more information» del taller → taller; el resto → clase gratis)
+    if (sw) {
+      const want = preselect[a.dataset.bookCta] || preselect['*'];
+      if (want && sw.value !== want) { sw.value = want; applyVariant(); }
+    }
+    track('cta_click', { cta_text: (a.textContent || '').replace(/[→↗]/g, '').replace(/\s+/g, ' ').trim().slice(0, 80), cta_location: a.dataset.bookCta, link_url: '#book' });
     // Con el menú móvil abierto, cerrarlo antes de bajar
     const nav = document.querySelector('.nav.open');
     if (nav) { const t = document.querySelector('.nav-toggle'); if (t) t.click(); }
@@ -61,9 +92,6 @@
   });
 
   // ---- Errores accesibles: marca el campo y los nombra en el aviso
-  const errBox = form.querySelector('.lf-error');
-  const btn = form.querySelector('.lf-submit');
-  const btnLabel = btn.innerHTML;
   const fieldsOf = () => [...form.querySelectorAll('input:not([type=hidden]), select')];
   fieldsOf().forEach((el) => el.addEventListener('input', () => { if (el.checkValidity()) el.removeAttribute('aria-invalid'); }));
   // Nombre del campo tal como se ve en pantalla (ya traducido en ?lang=es), sin «(optional)»
@@ -93,6 +121,7 @@
     const dial = cc ? cc.value : '+61';
     const rawPhone = $f('lf-phone').value.trim();
     const email = $f('lf-email').value.trim();
+    const loc = $f('lf-loc');                 // clases privadas no lleva ubicación
     const attribution = buildAttribution(ES ? 'es' : 'en');
     // El lead queda con esta landing como URL de llegada; el primer toque se conserva aparte (igual que /free-trial)
     if (attribution.landing_url && attribution.landing_url.indexOf('/' + formPage) === -1) attribution.first_landing_url = attribution.landing_url;
@@ -108,7 +137,7 @@
       last_name: sp > 0 ? name.slice(sp + 1) : '',
       email,
       phone: rawPhone[0] === '+' ? rawPhone : dial + ' ' + rawPhone.replace(/^0+/, ''),
-      location: $f('lf-loc').value,
+      location: loc ? loc.value : '',
       experience: $f('lf-experience').value,
       message: [`${form.dataset.message} (landing /${formPage})`, ...extras].join('\n'),
       attribution,
@@ -120,6 +149,7 @@
         + (new URLSearchParams(location.search).has('jkd_debug') ? '&jkd_debug=1' : '');
     };
     if (window.JKD_NO_BACKEND) { window.location.href = thanks(); return; }
+    const btnLabel = btn.innerHTML;
     btn.disabled = true; btn.textContent = L.sending;
     try {
       const saved = await postLead(payload);
