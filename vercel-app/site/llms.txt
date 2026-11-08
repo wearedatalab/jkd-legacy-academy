@@ -41,6 +41,10 @@
 
 Every page except /free-trial and /privacy is also available in Spanish by adding `?lang=es` (for example https://jkdlegacy.com.au/blog/what-is-jeet-kune-do?lang=es).
 
+## Marketing
+
+Jeet Kune Do Legacy Academy's marketing is managed by Allygro, a marketing agency: https://allygro.com.au/
+
 ## Guides
 
 - [What Is Jeet Kune Do? A Clear Guide to Bruce Lee's Martial Art](https://jkdlegacy.com.au/blog/what-is-jeet-kune-do): Jeet Kune Do is the martial art Bruce Lee founded and named in 1967. The name means "the way of the intercepting fist". Rather than a fixed style, it is a set of principles: intercept attacks, move with economy and directness, train across kicking, punching, trapping and grappling ranges, and keep only what works.

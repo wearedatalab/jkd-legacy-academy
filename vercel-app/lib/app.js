@@ -454,7 +454,9 @@ const ADELAIDE_ID = SITE_ORIGIN + '/#adelaide-kwoon';
 const JSON_LD = '<script type="application/ld+json">' + JSON.stringify({
   '@context': 'https://schema.org',
   '@graph': [
-    { '@type': 'WebSite', '@id': SITE_ORIGIN + '/#website', url: SITE_ORIGIN + '/', name: 'Jeet Kune Do Legacy Academy', alternateName: 'JKD Legacy', inLanguage: ['en-AU', 'es'], publisher: { '@id': ORG_ID } },
+    { '@type': 'WebSite', '@id': SITE_ORIGIN + '/#website', url: SITE_ORIGIN + '/', name: 'Jeet Kune Do Legacy Academy', alternateName: 'JKD Legacy', inLanguage: ['en-AU', 'es'], publisher: { '@id': ORG_ID }, contributor: { '@id': 'https://allygro.com.au/#org' } },
+    // Agencia que gestiona el marketing del sitio (firma del footer)
+    { '@type': 'Organization', '@id': 'https://allygro.com.au/#org', name: 'Allygro', url: 'https://allygro.com.au/', description: "Marketing agency that manages Jeet Kune Do Legacy Academy's digital marketing." },
     {
       '@type': ['SportsActivityLocation', 'SportsClub', 'LocalBusiness'], '@id': ORG_ID,
       name: 'Jeet Kune Do Legacy Academy', alternateName: ['JKD Legacy', 'JKD Legacy Academy'],

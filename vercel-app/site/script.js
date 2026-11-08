@@ -720,3 +720,14 @@ if (/\/thanks(\.html)?$/.test(location.pathname)) {
     form.addEventListener('submit', () => { fields().forEach((el) => (el.checkValidity() ? clear(el) : show(el))); }, true);
   });
 })();
+
+/* ===================== FIRMA DE LA AGENCIA (footer) =====================
+   Clic en «Allygro» → dataLayer {event:'outbound_click', link:'allygro_credit'} para GTM/GA4. */
+(function () {
+  document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest && e.target.closest('a[data-ev="allygro_credit"]');
+    if (!a) return;
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({ event: 'outbound_click', link: 'allygro_credit' });
+  }, true);
+})();
