@@ -401,7 +401,7 @@ const MIGRATION_REDIRECTS = {
   '/category/uncategorized': '/',
 };
 // Páginas reales del sitio nuevo (para no redirigirlas por error y para el fallback de "primer segmento").
-const SEO_LANDINGS = ['martial-arts-classes-melbourne', 'self-defence-classes-melbourne', 'jeet-kune-do-melbourne', 'womens-self-defence-melbourne', 'private-lessons-melbourne', 'jeet-kune-do-adelaide', 'affiliated-schools', 'bruce-lee-birthday'];
+const SEO_LANDINGS = ['martial-arts-classes-melbourne', 'self-defence-classes-melbourne', 'jeet-kune-do-melbourne', 'womens-self-defence-melbourne', 'private-lessons-melbourne', 'jeet-kune-do-adelaide', 'affiliated-schools', 'bruce-lee-birthday', 'womens-self-defence-workshop'];
 const REAL_PAGES = ['legacy', 'the-way', 'join-the-family', 'thanks', 'free-trial', 'privacy', ...SEO_LANDINGS];
 // Páginas solo en inglés (landing de pauta y privacidad) → sin hreflang/og:locale alternativos.
 // Las landings SEO y el blog son bilingües: la versión ?lang=es es un HTML propio (<página>.es.html).
@@ -532,7 +532,8 @@ async function injectHead(html, seo) {
   const canon = isEs ? esUrl : enUrl;
 
   let head = '';
-  if (!/<meta\s+name=["']robots["']/i.test(html)) {
+  // Cualquier orden de atributos: las versiones ES salen de BeautifulSoup como <meta content="…" name="robots"/>
+  if (!/<meta\b[^>]*\bname=["']robots["']/i.test(html)) {
     head += '<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">';
   }
   if (isEnOnly(seo.path)) {
@@ -719,6 +720,9 @@ const CAMPAIGN_SOURCE_RE = /^[a-z0-9][a-z0-9-]{1,58}$/;
 const SEED_CAMPAIGNS = [
   { name: 'Bruce Lee Birthday 2026', source: 'bruce-lee-birthday', landing: '/bruce-lee-birthday',
     description: "The Dragon's Birthday Experience · free event, Saturday 28 Nov 2026, 9:30–11:30 am" },
+  // Página no listada (noindex): se comparte por enlace directo
+  { name: "Women's Self-Defence Workshop · Dec 2026", source: 'womens-self-defence-workshop', landing: '/womens-self-defence-workshop',
+    description: "Women's Real-World Self-Defence Workshop · Sat 12 Dec 2026, 10:30 am–12:30 pm · 12 places · early bird A$99 (first 4), standard A$120" },
 ];
 async function ensureCampaignSeed() {
   for (const c of SEED_CAMPAIGNS) {

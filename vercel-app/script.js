@@ -659,6 +659,23 @@ if (/\/thanks(\.html)?$/.test(location.pathname)) {
   }
 }
 
+// ===== /thanks: reserva al Women's Real-World Self-Defence Workshop (/womens-self-defence-workshop, form_type women_workshop) =====
+// El lugar se confirma con el pago: el mensaje dice «solicitud recibida», no «inscrita».
+if (/\/thanks(\.html)?$/.test(location.pathname)) {
+  let fromW = ''; try { fromW = sessionStorage.getItem('jkd_from') || ''; } catch (e) {}
+  if (new URLSearchParams(location.search).get('form_type') === 'women_workshop' || fromW === 'women_workshop') {
+    const es = document.documentElement.lang === 'es';
+    const set = (sel, html) => { const el = document.querySelector(sel); if (el) { el.removeAttribute('data-i18n'); el.removeAttribute('data-i18n-html'); el.innerHTML = html; } };
+    const tel = '<a href="tel:+61459785073" style="color:var(--text)">0459 785 073</a>';
+    set('.thanks .eyebrow', es ? 'Solicitud recibida · sáb 12 dic' : 'Request received · Sat 12 Dec');
+    set('.thanks h1', es ? '¡Gracias!<br><span class="text-accent">Tu lugar está apartado</span>.' : 'Thank you!<br><span class="text-accent">Your place is on hold</span>.');
+    set('.thanks p.lead', es ? 'Te contactaremos en menos de 24 horas para confirmar si hay un lugar early bird (A$99) o estándar (A$120) y enviarte los datos de pago. Tu lugar queda confirmado al recibir el pago.'
+                             : 'We’ll contact you within 24 hours to confirm whether an early-bird (A$99) or standard (A$120) place is available and send you the payment details. Your place is confirmed once payment is received.');
+    set('.thanks .note', es ? 'Sábado 12 de diciembre, 10:30 a. m. – 12:30 p. m., en Unit 6 / 72-80 Hampstead Rd, Maidstone. ¿Preguntas? Llámanos al ' + tel + '.'
+                            : 'Saturday 12 December, 10:30 am – 12:30 pm, at Unit 6 / 72-80 Hampstead Rd, Maidstone. Questions? Call us on ' + tel + '.');
+  }
+}
+
 // ===== /thanks: solicitudes de información de las landings (form_type info_*, ver landing-form.js) =====
 // free_trial conserva el mensaje de la clase gratis (lo pone script.js con jkd_from = free-trial).
 if (/\/thanks(\.html)?$/.test(location.pathname)) {
@@ -679,7 +696,7 @@ if (/\/thanks(\.html)?$/.test(location.pathname)) {
 // resolverlo; se borra en cuanto el dato es válido. Complementa los envíos de #book, #trial-form y #bday-form
 // (sus scripts siguen validando y midiendo igual: este bloque solo agrega el mensaje accesible junto al campo).
 (() => {
-  const forms = ['book', 'trial-form', 'bday-form'].map((id) => document.getElementById(id)).filter(Boolean);
+  const forms = ['book', 'trial-form', 'bday-form', 'ws-form'].map((id) => document.getElementById(id)).filter(Boolean);
   if (!forms.length) return;
   const es = document.documentElement.lang === 'es';
   const ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 7v6M12 16.5v.5"/></svg>';
